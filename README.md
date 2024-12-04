@@ -43,8 +43,8 @@ Pour exécuter ce projet localement, suivez ces étapes :
 1. Clonez le dépôt :
 
     ```bash
-    git clone https://github.com/username/movie-suggestion-system.git
-    cd movie-suggestion-system
+    git clone [https://github.com/yourusername/film-recommender.git]
+    cd film-recommender
     ```
 
 2. Créez un environnement virtuel :
