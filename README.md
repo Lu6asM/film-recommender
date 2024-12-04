@@ -1,7 +1,7 @@
 # 🎥 Movie Suggestion System
 
 ## 📋 Description
-Ce projet vise à créer un système de suggestion de films basé sur un dataset IMDb. Il comprend plusieurs étapes clés :
+Ce projet vise à créer un système de suggestion de films basé sur un dataset. Il comprend plusieurs étapes clés :
 1. **Nettoyage des données :** Préparation des données brutes pour l'analyse.
 2. **Visualisation des données :** Une application Streamlit permettant de générer automatiquement des graphiques pour explorer les données.
 3. **Système de recommandation :** Utilisation de techniques de machine learning pour recommander des films.
@@ -41,60 +41,45 @@ requirements.txt   # Liste des dépendances Python
 Pour exécuter ce projet localement, suivez ces étapes :
 
 1. Clonez le dépôt :
-
     ```bash
     git clone https://github.com/username/movie-suggestion-system.git
     cd movie-suggestion-system
     ```
-
 2. Créez un environnement virtuel :
-
     ```bash
     python -m venv venv
     ```
-
 3. Activez l'environnement virtuel :
-
     - Sur macOS/Linux :
 
         ```bash
         source venv/bin/activate
         ```
-
     - Sur Windows :
-
         ```bash
         venv\Scripts\activate
         ```
-
 4. Installez les dépendances nécessaires :
-
     ```bash
     pip install -r requirements.txt
     ```
-
+    
 ---
 
 ## 🛠 Usage
-
 - **Visualisation des données :** Démarrez l'application Streamlit :
-
     ```bash
     streamlit run streamlit_viz/app.py
     ```
-
 - **Système de recommandation :** Exécutez le script d'entraînement ou les prédictions :
-
     ```bash
     python recommendation/train_model.py
     ```
-
 - **Page d'accueil Streamlit :** Lancez l'interface de recommendation :
-
     ```bash
     streamlit run streamlit_home/app.py
     ```
-    
+  
 ---
 
 ## 🛠 Technologies utilisées
@@ -102,10 +87,6 @@ Pour exécuter ce projet localement, suivez ces étapes :
 - **Frameworks :** Pandas, Scikit-learn, Streamlit
 - **Visualisation :** Matplotlib, Seaborn
 - **Gestion des versions :** Git, GitHub
-
-## 🤝 Contributeurs
-- [Ton nom] - Data Cleaning et Visualisation
-- [Autres contributeurs] - Machine Learning et autres aspects
 
 ## 🚧 Améliorations futures
 - Optimisation des algorithmes de recommandation.
