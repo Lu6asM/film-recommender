@@ -41,31 +41,34 @@ requirements.txt   # Liste des dépendances Python
 Pour exécuter ce projet localement, suivez ces étapes :
 
 1. Clonez le dépôt :
-2. 
+
     ```bash
     git clone https://github.com/username/movie-suggestion-system.git
     cd movie-suggestion-system
     ```
-3. Créez un environnement virtuel :
-4. 
+
+2. Créez un environnement virtuel :
+
     ```bash
     python -m venv venv
     ```
-5. Activez l'environnement virtuel :
-6. 
+
+3. Activez l'environnement virtuel :
+
     - Sur macOS/Linux :
-    - 
 
         ```bash
         source venv/bin/activate
         ```
+
     - Sur Windows :
-    - 
+
         ```bash
         venv\Scripts\activate
         ```
-7. Installez les dépendances nécessaires :
-8. 
+
+4. Installez les dépendances nécessaires :
+
     ```bash
     pip install -r requirements.txt
     ```
