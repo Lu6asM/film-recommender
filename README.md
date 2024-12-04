@@ -25,12 +25,12 @@ Ce projet vise à créer un système de suggestion de films basé sur un dataset
 
 ## 🗂 Structure du projet
 ```plaintext
-/data/             # Scripts et données liés au nettoyage
+/data_cleaning/    # Scripts et données liés au nettoyage
 /streamlit_viz/    # Application Streamlit pour la visualisation du dataset
 /recommendation/   # Scripts pour le système de recommandation
 /streamlit_home/   # Application Streamlit pour la page d'accueil
 /data/             # Datasets (bruts et nettoyés)
-/notebooks/        # Jupyter Notebooks pour expérimentations
+/notebooks/        # Jupyter Notebooks pour la documentation des processus
 README.md          # Documentation
 requirements.txt   # Liste des dépendances Python
 ```
@@ -41,25 +41,31 @@ requirements.txt   # Liste des dépendances Python
 Pour exécuter ce projet localement, suivez ces étapes :
 
 1. Clonez le dépôt :
+2. 
     ```bash
     git clone https://github.com/username/movie-suggestion-system.git
     cd movie-suggestion-system
     ```
-2. Créez un environnement virtuel :
+3. Créez un environnement virtuel :
+4. 
     ```bash
     python -m venv venv
     ```
-3. Activez l'environnement virtuel :
+5. Activez l'environnement virtuel :
+6. 
     - Sur macOS/Linux :
+    - 
 
         ```bash
         source venv/bin/activate
         ```
     - Sur Windows :
+    - 
         ```bash
         venv\Scripts\activate
         ```
-4. Installez les dépendances nécessaires :
+7. Installez les dépendances nécessaires :
+8. 
     ```bash
     pip install -r requirements.txt
     ```
@@ -67,15 +73,23 @@ Pour exécuter ce projet localement, suivez ces étapes :
 ---
 
 ## 🛠 Usage
+- **Nettoyage des données :** Lancez les scripts dans le dossier `/data_cleaning/` :
+- 
+    ```bash
+    python data_cleaning/clean_data.py
+    ```
 - **Visualisation des données :** Démarrez l'application Streamlit :
+- 
     ```bash
     streamlit run streamlit_viz/app.py
     ```
 - **Système de recommandation :** Exécutez le script d'entraînement ou les prédictions :
+- 
     ```bash
     python recommendation/train_model.py
     ```
 - **Page d'accueil Streamlit :** Lancez l'interface de recommendation :
+- 
     ```bash
     streamlit run streamlit_home/app.py
     ```
