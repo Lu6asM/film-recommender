@@ -43,7 +43,7 @@ Pour exécuter ce projet localement, suivez ces étapes :
 1. Clonez le dépôt :
 
     ```bash
-    git clone [https://github.com/yourusername/film-recommender.git]
+    git clone https://github.com/Lu6asM/film-recommender.git
     cd film-recommender
     ```
 
