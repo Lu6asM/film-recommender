@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import plotly as px
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,7 +10,6 @@ import numpy as np
 def load_data():
     try:
         df = pd.read_csv("../data/processed/df_movie_cleaned.csv")
-        df['Genre Principal'] = df['Genres'].apply(lambda x: x.split(',')[0] if isinstance(x, str) else x)
         df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         df["Réalisateur(s)"] = df["Réalisateur(s)"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         return df
@@ -42,7 +41,7 @@ def filter_data(df):
     if selected_genre:
         df = df[df["Genres"].apply(lambda x: any(genre in x for genre in selected_genre))]
     
-    min_year, max_year = st.sidebar.slider("Année", int(df["Année"].min()), int(df["Année"].max()), (1970, 2001))
+    min_year, max_year = st.sidebar.slider("Année", int(df["Année"].min()), int(df["Année"].max()), (1970, 2013))
     df = df[(df["Année"] >= min_year) & (df["Année"] <= max_year)]
     
     return df
@@ -51,6 +50,7 @@ df_filtered = filter_data(df)
 
 # Section d'analyse primaire
 def primary_analysis(df):
+    st.markdown("# Analyses Primaires 🔍")
     # Répartition des films par genre
     st.subheader("Répartition des Films par Genre")
     genre_counts = df["Genre Principal"].value_counts()
@@ -101,7 +101,7 @@ def primary_analysis(df):
         fig.update_layout(xaxis_title="Note", yaxis_title="Popularité")
         st.plotly_chart(fig)
 
-    st.subheader("Top 10 des Films par Popularité")
+    st.subheader("Top 10 des Films")
     if 'Genre Principal' in df.columns and 'Votes' in df.columns:
         top_popular_movies = df.nlargest(10, 'Votes')[["Titre Français", "Votes", "Genre Principal"]]
     
@@ -122,6 +122,7 @@ def primary_analysis(df):
 
 # Fonction pour créer des graphiques personnalisés
 def custom_chart(df):
+    st.markdown("# Your Own Chart 📈")
     st.subheader("Faites votre propre analyse 🕵️")
 
     # Sélection des colonnes pour les axes
@@ -193,15 +194,16 @@ def custom_chart(df):
 
 # Sidebar pour choisir les sections
 st.sidebar.subheader("Analyse")
-if st.sidebar.checkbox("Analyse Primaire"):
+if st.sidebar.checkbox("Analyse Primaire 🔍"):
     primary_analysis(df_filtered)
 
 st.sidebar.subheader("Analyse Intéractive")
-if st.sidebar.checkbox("Your Own Chart"):
+if st.sidebar.checkbox("Your Own Chart 📈"):
     custom_chart(df_filtered)
 
 # Suggestion de films par popularité et genre
 def movie_suggester(df):
+    st.markdown("# Pocket Suggester 👝")
     st.subheader("Suggestion par Popularité")
     selected_popularity = st.radio("Filtrer par Popularité", df["Popularité"].unique(), index=0)
     suggested_movies = df[df["Popularité"] == selected_popularity][["Réalisateur(s)", "Titre Français", "Note", "Genres"]]
@@ -213,5 +215,5 @@ def movie_suggester(df):
     st.write(suggested_movies)
 
 st.sidebar.subheader("Analyse Suggestion")
-if st.sidebar.checkbox("Pocket Suggester"):
+if st.sidebar.checkbox("Pocket Suggester 👝"):
     movie_suggester(df_filtered)
