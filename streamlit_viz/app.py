@@ -9,7 +9,8 @@ import numpy as np
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_csv("../data/processed/df_movie_cleaned.csv")
+        url = "https://raw.githubusercontent.com/Lu6asM/film-recommender/main/data/processed/df_movie_cleaned.csv"
+        df = pd.read_csv(url)
         df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         df["Réalisateur(s)"] = df["Réalisateur(s)"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         return df
