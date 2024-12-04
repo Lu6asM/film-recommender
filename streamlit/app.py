@@ -1,80 +1,66 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 import pandas as pd
-import numpy as np
-import seaborn as sns
 import plotly.express as px
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
 
+# Fonction pour charger les données
+@st.cache_data
+def load_data():
+    try:
+        df = pd.read_csv("../data/processed/df_movie_cleaned.csv")
+        df['Genre Principal'] = df['Genres'].apply(lambda x: x.split(',')[0] if isinstance(x, str) else x)
+        df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
+        df["Réalisateur(s)"] = df["Réalisateur(s)"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
+        return df
+    except FileNotFoundError:
+        st.error("Le fichier 'df_movie_cleaned.csv' est introuvable.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Erreur lors du chargement des données : {e}")
+        st.stop()
 
-st.title('Analyse sur les films 🎞️')
-
-
-
-# Setup
-try:
-    df = pd.read_csv("../data/processed/df_movie_cleaned.csv", nrows=4000)
-    df['Genre Principal'] = df['Genres'].apply(lambda x: x.split(',')[0] if isinstance(x, str) else x)
-    df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
-    df["Nom du/des Réalisateur(s)"] = df["Nom du/des Réalisateur(s)"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
-except FileNotFoundError:
-    st.error("Le fichier 'df_cleaned_v2.csv' est introuvable.")
-    st.stop()
-except Exception as e:
-    st.error(f"Erreur lors du chargement des données : {e}")
-    st.stop()
-
-
+# Chargement des données
+df = load_data()
 
 # Sidebar
 st.sidebar.header("Options")
+
+# Afficher le dataset original
 if st.sidebar.checkbox("Afficher le dataset original"):
     st.subheader("Dataset original :")
     st.write(df)
-    
+
 # Filtrage des données
-if st.sidebar.checkbox("Appliquer un filtre"):
+def filter_data(df):
     st.sidebar.subheader("Filtres")
     selected_genre = st.sidebar.multiselect("Sélectionnez un ou plusieurs genres", 
                                             options=np.unique(sum(df["Genres"], [])),
+                                            help="Attention cela s'applique à tout les graphique!",
                                             default=None)
-
-
     if selected_genre:
-        df_filtered = df[df["Genres"].apply(lambda x: any(genre in x for genre in selected_genre))]
-    else:
-        df_filtered = df
-
-
+        df = df[df["Genres"].apply(lambda x: any(genre in x for genre in selected_genre))]
+    
     min_year, max_year = st.sidebar.slider("Année", int(df["Année"].min()), int(df["Année"].max()), (1970, 2001))
-    df_filtered = df_filtered[(df_filtered["Année"] >= min_year) & (df_filtered["Année"] <= max_year)]
+    df = df[(df["Année"] >= min_year) & (df["Année"] <= max_year)]
+    
+    return df
 
+df_filtered = filter_data(df)
 
-    st.subheader("Dataset filtré :")
-    df_filtered
-
-
-# Section
-st.sidebar.header("Sections")
-st.sidebar.subheader("Analyse")
-
-
-# Section : Analyse Primaire
-if st.sidebar.checkbox("Primary Analysis"):
-
-
-    # Répartition des Films par Genre
+# Section d'analyse primaire
+def primary_analysis(df):
+    # Répartition des films par genre
     st.subheader("Répartition des Films par Genre")
     genre_counts = df["Genre Principal"].value_counts()
-    fig3 = px.pie(genre_counts, names=genre_counts.index, values=genre_counts, title="Répartition des Films par Genre")
-    st.plotly_chart(fig3)
+    fig = px.pie(genre_counts, names=genre_counts.index, values=genre_counts, title="Répartition des Films par Genre")
+    st.plotly_chart(fig)
 
-
-    # Matrice de Corrélation
+    # Matrice de corrélation
     st.subheader("Matrice de Corrélation")
-    selected_columns = st.multiselect("Sélectionnez les colonnes numériques", options=df.select_dtypes(include=["float64", "int64"]).columns.tolist(), default=df.select_dtypes(include=["float64", "int64"]).columns.tolist())
-    
-
-    if len(selected_columns) > 1:  # Assurez-vous que plus d'une colonne est sélectionnée
+    selected_columns = st.multiselect("Sélectionnez les colonnes numériques", options=df.select_dtypes(include=["float64", "int64"]).columns.tolist())
+    if len(selected_columns) > 1:
         corr = df[selected_columns].corr()
         fig, ax = plt.subplots(figsize=(10, 8))
         sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
@@ -82,109 +68,150 @@ if st.sidebar.checkbox("Primary Analysis"):
     else:
         st.warning("Veuillez sélectionner au moins deux colonnes pour afficher la matrice de corrélation.")
 
-
-    # Histogramme des Notes/Votes
-    st.subheader("Distribution des Notes/Votes")
+    st.subheader("Distribution des Notes et Votes")
     genre_filter = st.selectbox("Filtrer par Genre Principal", options=["Tous"] + df["Genre Principal"].unique().tolist(), index=0)
-
     if genre_filter != "Tous":
         df_filtered = df[df["Genre Principal"] == genre_filter]
     else:
         df_filtered = df
 
-
-    # Vérification de la présence des colonnes nécessaires avant d'afficher les graphiques
     if 'Note' in df_filtered.columns:
         fig = px.histogram(df_filtered, x="Note", nbins=20, color="Popularité", title="Distribution des Notes", hover_data=["Titre Français"])
         st.plotly_chart(fig)
-    else:
-        st.warning("La colonne 'Note' n'est pas présente dans les données filtrées.")
-
 
     if 'Votes' in df_filtered.columns:
-        fig2 = px.histogram(df_filtered, x="Votes", nbins=20, color="Popularité", title="Distribution des Votes", hover_data=["Titre Français"])
-        st.plotly_chart(fig2)
+        fig = px.histogram(df_filtered, x="Votes", nbins=20, color="Genre Principal", title="Distribution des Votes", log_y=True, hover_data=["Titre Français"])
+        st.plotly_chart(fig)
+
+    st.subheader("Nombre de Films par Année")
+    if 'Année' in df_filtered.columns:
+        films_par_annee = df.groupby("Année").size().reset_index(name="Nombre de Films")
+        fig = px.line(films_par_annee, x="Année", y="Nombre de Films", title="Evolution du Nombre de Films par Année")
+        st.plotly_chart(fig)
+
+    st.subheader("Distribution des Durées des Films")
+    if 'Durée (minutes)' in df_filtered.columns:
+        fig = px.box(df, y="Durée (minutes)", title="Distribution des Durées des Films")
+        fig.update_layout(yaxis_title="Durée (minutes)")
+        st.plotly_chart(fig)
+
+    st.subheader("Relation entre Note et Popularité")
+    if 'Note' in df_filtered.columns:
+        fig = px.scatter(df, x="Note", y="Popularité", color="Popularité", hover_data=["Titre Français"])
+        fig.update_layout(xaxis_title="Note", yaxis_title="Popularité")
+        st.plotly_chart(fig)
+
+    st.subheader("Top 10 des Films par Popularité")
+    if 'Genre Principal' in df.columns and 'Votes' in df.columns:
+        top_popular_movies = df.nlargest(10, 'Votes')[["Titre Français", "Votes", "Genre Principal"]]
+    
+        fig = px.bar(top_popular_movies, 
+                 x="Titre Français", 
+                 y="Votes", 
+                 color="Genre Principal",
+                 title="Top 10 des Films les Plus Populaires",
+                 color_continuous_scale='Viridis')
+    
+        fig.update_layout(xaxis_title="Titre du Film", yaxis_title="Votes")
+    
+        st.plotly_chart(fig)
     else:
-        st.warning("La colonne 'Votes' n'est pas présente dans les données filtrées.")
+        st.warning("Les colonnes 'Popularité' ou 'Votes' sont manquantes dans les données.")
 
 
 
-# if st.sidebar.checkbox("Analyse Primaire"):
-#     st.subheader("Répartition des Films par Genre")
-#     genre_counts = df["Genre Principal"].value_counts()
-#     fig3 = px.pie(genre_counts, names=genre_counts.index, values=genre_counts, title="Répartition des Films par Genre")
-#     st.plotly_chart(fig3)
-
-# # Matrice de corrélation
-#     if st.sidebar.checkbox("Afficher la matrice de corrélation"):
-#         corr = df.select_dtypes(include=["float64", "int64"]).corr()
-#         fig, ax = plt.subplots()
-#         sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
-#         st.pyplot(fig)
-
-# # Section : Histogramme des Notes/Votes
-#     if st.sidebar.checkbox("Histogramme des Notes/Votes"):
-
-#         st.subheader("Distribution des Notes/Votes")
-#         if 'Note' in df_filtered.columns:
-#             fig = px.histogram(df_filtered, x="Note", nbins=20, color="Popularité", title="Distribution des Notes", 
-#                            hover_data=["Titre Français"])
-#             st.plotly_chart(fig)
-
-#         if 'Votes' in df_filtered.columns:
-#             fig2 = px.histogram(df_filtered, x="Votes", nbins=20, color="Popularité", title="Distribution des Votes", 
-#                                 hover_data=["Titre Français"])
-#             st.plotly_chart(fig2)
-
-
-# Section : Analyse Intéractive
-st.sidebar.subheader("Analyse Intéractive")
-if st.sidebar.checkbox("Your Own Chart"):
+# Fonction pour créer des graphiques personnalisés
+def custom_chart(df):
     st.subheader("Faites votre propre analyse 🕵️")
 
-
-    st.subheader("Paramètres")
+    # Sélection des colonnes pour les axes
     x_axis = st.selectbox("Choisissez la colonne pour l'axe X", options=df.columns, index=5)
     y_axis = st.selectbox("Choisissez la colonne pour l'axe Y", options=df.columns, index=7)
+
+    # Sélection du type de graphique
     chart_type = st.radio("Type de graphique", 
                           ["Scatter Plot", "Bar Plot", "Line Plot", "Area Plot", "Histogram", 
                            "Box Plot", "Pie Chart", "Violin Plot", "Bubble Chart"], index=0)
 
+    # Gestion du type de graphique selon les types de données
     if chart_type == "Scatter Plot":
-        fig = px.scatter(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        if df[x_axis].dtype in ['float64', 'int64'] and df[y_axis].dtype in ['float64', 'int64']:
+            fig = px.scatter(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("Le Scatter Plot nécessite des colonnes numériques.")
+            return
     elif chart_type == "Bar Plot":
-        fig = px.bar(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['float64', 'int64']:
+            fig = px.bar(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("Le Bar Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
+            return
     elif chart_type == "Line Plot":
-        fig = px.line(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        if df[x_axis].dtype in ['int64', 'float64'] and df[y_axis].dtype in ['int64', 'float64']:
+            fig = px.line(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("Le Line Plot nécessite des colonnes numériques pour les axes X et Y.")
+            return
     elif chart_type == "Area Plot":
-        fig = px.area(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        if df[x_axis].dtype in ['int64', 'float64'] and df[y_axis].dtype in ['int64', 'float64']:
+            fig = px.area(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("L'Area Plot nécessite des colonnes numériques pour les axes X et Y.")
+            return
     elif chart_type == "Histogram":
-        fig = px.histogram(df, x=x_axis, color="Popularité", hover_data=["Titre Français"])
+        if df[x_axis].dtype in ['int64', 'float64']:
+            fig = px.histogram(df, x=x_axis, color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("L'Histogram nécessite une colonne numérique.")
+            return
     elif chart_type == "Box Plot":
-        fig = px.box(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['int64', 'float64']:
+            fig = px.box(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("Le Box Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
+            return
     elif chart_type == "Pie Chart":
-        fig = px.pie(df, names=x_axis, values=y_axis, hover_data=["Titre Français"])
+        if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['int64', 'float64']:
+            fig = px.pie(df, names=x_axis, values=y_axis, hover_data=["Titre Français"])
+        else:
+            st.warning("Le Pie Chart nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
+            return
     elif chart_type == "Violin Plot":
-        fig = px.violin(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['int64', 'float64']:
+            fig = px.violin(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("Le Violin Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
+            return
     elif chart_type == "Bubble Chart":
-        fig = px.scatter(df, x=x_axis, y=y_axis, size="Popularité", color="Popularité", hover_data=["Titre Français"])
-
+        if df[x_axis].dtype in ['float64', 'int64'] and df[y_axis].dtype in ['float64', 'int64']:
+            fig = px.scatter(df, x=x_axis, y=y_axis, size="Popularité", color="Popularité", hover_data=["Titre Français"])
+        else:
+            st.warning("Le Bubble Chart nécessite des colonnes numériques pour les axes X et Y.")
+            return
 
     st.plotly_chart(fig)
 
+# Sidebar pour choisir les sections
+st.sidebar.subheader("Analyse")
+if st.sidebar.checkbox("Analyse Primaire"):
+    primary_analysis(df_filtered)
 
-# Section : Suggestion de films
-st.sidebar.subheader("Analyse Suggestion")
-if st.sidebar.checkbox("Pocket Suggester"):
-    
+st.sidebar.subheader("Analyse Intéractive")
+if st.sidebar.checkbox("Your Own Chart"):
+    custom_chart(df_filtered)
 
+# Suggestion de films par popularité et genre
+def movie_suggester(df):
     st.subheader("Suggestion par Popularité")
     selected_popularity = st.radio("Filtrer par Popularité", df["Popularité"].unique(), index=0)
-    suggested_movies = df[df["Popularité"] == selected_popularity][["Nom du/des Réalisateur(s)", "Titre Français", "Note", "Genres"]]
+    suggested_movies = df[df["Popularité"] == selected_popularity][["Réalisateur(s)", "Titre Français", "Note", "Genres"]]
     st.write(suggested_movies)
-    
 
-    st.subheader("Suggestion par Genres Principal")
-    selected_popularity = st.radio("Filtrer par Genres", df["Genre Principal"].unique(), index=0)
-    suggested_movies = df[df["Genre Principal"] == selected_popularity][["Nom du/des Réalisateur(s)", "Titre Français", "Note", "Genres", "Popularité"]]
+    st.subheader("Suggestion par Genre Principal")
+    selected_genre = st.radio("Filtrer par Genre", df["Genre Principal"].unique(), index=0)
+    suggested_movies = df[df["Genre Principal"] == selected_genre][["Réalisateur(s)", "Titre Français", "Note", "Genres", "Popularité"]]
     st.write(suggested_movies)
+
+st.sidebar.subheader("Analyse Suggestion")
+if st.sidebar.checkbox("Pocket Suggester"):
+    movie_suggester(df_filtered)
