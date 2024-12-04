@@ -1,4 +1,4 @@
-# 🎥 Movie Suggestion System
+# 🎥 Film Recommender System
 
 ## 📋 Description
 Ce projet vise à créer un système de suggestion de films basé sur un dataset. Il comprend plusieurs étapes clés :
