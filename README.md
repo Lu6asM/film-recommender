@@ -1,4 +1,4 @@
-# 🎥 Movie Suggestion System
+# 🎥 Film Recommender System
 
 ## 📋 Description
 Ce projet vise à créer un système de suggestion de films basé sur un dataset. Il comprend plusieurs étapes clés :
@@ -43,7 +43,7 @@ Pour exécuter ce projet localement, suivez ces étapes :
 1. Clonez le dépôt :
 
     ```bash
-    git clone [https://github.com/yourusername/film-recommender.git]
+    git clone https://github.com/Lu6asM/film-recommender.git
     cd film-recommender
     ```
 
