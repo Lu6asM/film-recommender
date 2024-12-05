@@ -130,6 +130,9 @@ def custom_chart(df):
     x_axis = st.selectbox("Choisissez la colonne pour l'axe X", options=df.columns, index=5)
     y_axis = st.selectbox("Choisissez la colonne pour l'axe Y", options=df.columns, index=7)
 
+    # Sélection de la colonne pour la couleur (hue)
+    hue_column = st.selectbox("Choisissez la colonne pour la couleur (hue)", options=df.columns)
+
     # Sélection du type de graphique
     chart_type = st.radio("Type de graphique", 
                           ["Scatter Plot", "Bar Plot", "Line Plot", "Area Plot", "Histogram", 
@@ -138,37 +141,37 @@ def custom_chart(df):
     # Gestion du type de graphique selon les types de données
     if chart_type == "Scatter Plot":
         if df[x_axis].dtype in ['float64', 'int64'] and df[y_axis].dtype in ['float64', 'int64']:
-            fig = px.scatter(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+            fig = px.scatter(df, x=x_axis, y=y_axis, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("Le Scatter Plot nécessite des colonnes numériques.")
             return
     elif chart_type == "Bar Plot":
         if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['float64', 'int64']:
-            fig = px.bar(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+            fig = px.bar(df, x=x_axis, y=y_axis, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("Le Bar Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
             return
     elif chart_type == "Line Plot":
         if df[x_axis].dtype in ['int64', 'float64'] and df[y_axis].dtype in ['int64', 'float64']:
-            fig = px.line(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+            fig = px.line(df, x=x_axis, y=y_axis, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("Le Line Plot nécessite des colonnes numériques pour les axes X et Y.")
             return
     elif chart_type == "Area Plot":
         if df[x_axis].dtype in ['int64', 'float64'] and df[y_axis].dtype in ['int64', 'float64']:
-            fig = px.area(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+            fig = px.area(df, x=x_axis, y=y_axis, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("L'Area Plot nécessite des colonnes numériques pour les axes X et Y.")
             return
     elif chart_type == "Histogram":
         if df[x_axis].dtype in ['int64', 'float64']:
-            fig = px.histogram(df, x=x_axis, color="Popularité", hover_data=["Titre Français"])
+            fig = px.histogram(df, x=x_axis, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("L'Histogram nécessite une colonne numérique.")
             return
     elif chart_type == "Box Plot":
         if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['int64', 'float64']:
-            fig = px.box(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+            fig = px.box(df, x=x_axis, y=y_axis, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("Le Box Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
             return
@@ -180,13 +183,13 @@ def custom_chart(df):
             return
     elif chart_type == "Violin Plot":
         if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['int64', 'float64']:
-            fig = px.violin(df, x=x_axis, y=y_axis, color="Popularité", hover_data=["Titre Français"])
+            fig = px.violin(df, x=x_axis, y=y_axis, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("Le Violin Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
             return
     elif chart_type == "Bubble Chart":
         if df[x_axis].dtype in ['float64', 'int64'] and df[y_axis].dtype in ['float64', 'int64']:
-            fig = px.scatter(df, x=x_axis, y=y_axis, size="Popularité", color="Popularité", hover_data=["Titre Français"])
+            fig = px.scatter(df, x=x_axis, y=y_axis, size=hue_column, color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("Le Bubble Chart nécessite des colonnes numériques pour les axes X et Y.")
             return
