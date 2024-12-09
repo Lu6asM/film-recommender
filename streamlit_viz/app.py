@@ -89,13 +89,13 @@ def primary_analysis(df):
 
     st.subheader("Nombre de Films par Date de Sortie")
     if 'Date de Sortie' in df_filtered.columns:
-        films_par_annee = df.groupby("Date de Sortie").size().reset_index(name="Nombre de Films")
+        films_par_annee = df.groupby(df["Date de Sortie"].dt.year).size().reset_index(name="Nombre de Films")
         fig = px.line(films_par_annee, x="Date de Sortie", y="Nombre de Films", title="Evolution du Nombre de Films par Date de Sortie")
         st.plotly_chart(fig)
 
     st.subheader("Distribution des Durées des Films")
     if 'Durée' in df_filtered.columns:
-        fig = px.box(df, y="Durée", title="Distribution des Durées des Films")
+        fig = px.box(df, y="Durée", title="Distribution des Durées des Films", points="outliers")
         fig.update_layout(yaxis_title="Durée")
         st.plotly_chart(fig)
 
