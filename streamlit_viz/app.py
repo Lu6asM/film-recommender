@@ -5,12 +5,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Fonction pour charger les données
+# Fonction pour charger les donnéesd
 @st.cache_data
 def load_data():
     try:
         url = "https://raw.githubusercontent.com/Lu6asM/film-recommender/main/data/processed/df_movie_cleaned.csv"
         df = pd.read_csv(url)
+        # Application des transformations sur les colonnes
         df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         df["Réalisateur(s)"] = df["Réalisateur(s)"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         return df
@@ -121,6 +122,7 @@ def primary_analysis(df):
 
 
 
+
 # Fonction pour créer des graphiques personnalisés
 def custom_chart(df):
     st.markdown("# Your Own Chart 📈")
@@ -176,22 +178,22 @@ def custom_chart(df):
             st.warning("Le Box Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
             return
     elif chart_type == "Pie Chart":
-        if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['int64', 'float64']:
-            fig = px.pie(df, names=x_axis, values=y_axis, hover_data=["Titre Français"])
+        if df[x_axis].dtype == 'object':
+            fig = px.pie(df, names=x_axis, title="Répartition des données")
         else:
-            st.warning("Le Pie Chart nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
+            st.warning("Le Pie Chart nécessite une colonne catégorique.")
             return
     elif chart_type == "Violin Plot":
         if df[x_axis].dtype == 'object' and df[y_axis].dtype in ['int64', 'float64']:
-            fig = px.violin(df, x=x_axis, y=y_axis, color=hue_column, hover_data=["Titre Français"])
+            fig = px.violin(df, x=x_axis, y=y_axis, color=hue_column, box=True, hover_data=["Titre Français"])
         else:
             st.warning("Le Violin Plot nécessite une colonne catégorique pour l'axe X et une colonne numérique pour l'axe Y.")
             return
     elif chart_type == "Bubble Chart":
-        if df[x_axis].dtype in ['float64', 'int64'] and df[y_axis].dtype in ['float64', 'int64']:
-            fig = px.scatter(df, x=x_axis, y=y_axis, size=hue_column, color=hue_column, hover_data=["Titre Français"])
+        if df[x_axis].dtype in ['int64', 'float64'] and df[y_axis].dtype in ['int64', 'float64']:
+            fig = px.scatter(df, x=x_axis, y=y_axis, size="Popularité", color=hue_column, hover_data=["Titre Français"])
         else:
-            st.warning("Le Bubble Chart nécessite des colonnes numériques pour les axes X et Y.")
+            st.warning("Le Bubble Chart nécessite des colonnes numériques.")
             return
 
     st.plotly_chart(fig)
