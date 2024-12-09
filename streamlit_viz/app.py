@@ -9,7 +9,7 @@ import numpy as np
 @st.cache_data
 def load_data():
     try:
-        url = "https://raw.githubusercontent.com/Lu6asM/film-recommender/main/data/processed/df_movie_cleaned.csv"
+        url = "C:/Users/koke7/github/film-recommender/data/processed/df_movie_cleaned.csv"
         df = pd.read_csv(url)
         # Application des transformations sur les colonnes
         df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
@@ -38,13 +38,15 @@ def filter_data(df):
     st.sidebar.subheader("Filtres")
     selected_genre = st.sidebar.multiselect("Sélectionnez un ou plusieurs genres", 
                                             options=np.unique(sum(df["Genres"], [])),
-                                            help="Attention cela s'applique à tout les graphique!",
+                                            help="Attention cela s'applique à tout les graphiques!",
                                             default=None)
     if selected_genre:
         df = df[df["Genres"].apply(lambda x: any(genre in x for genre in selected_genre))]
     
-    min_year, max_year = st.sidebar.slider("Année", int(df["Année"].min()), int(df["Année"].max()), (1970, 2013))
-    df = df[(df["Année"] >= min_year) & (df["Année"] <= max_year)]
+    df["Date de Sortie"] = pd.to_datetime(df["Date de Sortie"], errors='coerce')
+    
+    min_year, max_year = st.sidebar.slider("Date de Sortie", df["Date de Sortie"].min().year, df["Date de Sortie"].max().year, (1970, 2013))
+    df = df[(df["Date de Sortie"] >= pd.Timestamp(min_year, 1, 1)) & (df["Date de Sortie"] <= pd.Timestamp(max_year, 12, 31))]
     
     return df
 
@@ -70,55 +72,55 @@ def primary_analysis(df):
     else:
         st.warning("Veuillez sélectionner au moins deux colonnes pour afficher la matrice de corrélation.")
 
-    st.subheader("Distribution des Notes et Votes")
+    st.subheader("Distribution des Note imdbs et Votes imdb")
     genre_filter = st.selectbox("Filtrer par Genre Principal", options=["Tous"] + df["Genre Principal"].unique().tolist(), index=0)
     if genre_filter != "Tous":
         df_filtered = df[df["Genre Principal"] == genre_filter]
     else:
         df_filtered = df
 
-    if 'Note' in df_filtered.columns:
-        fig = px.histogram(df_filtered, x="Note", nbins=20, color="Popularité", title="Distribution des Notes", hover_data=["Titre Français"])
+    if 'Note imdb' in df_filtered.columns:
+        fig = px.histogram(df_filtered, x="Note imdb", nbins=20, color="Réputation", title="Distribution des Notes", hover_data=["Titre Français"])
         st.plotly_chart(fig)
 
-    if 'Votes' in df_filtered.columns:
-        fig = px.histogram(df_filtered, x="Votes", nbins=20, color="Genre Principal", title="Distribution des Votes", log_y=True, hover_data=["Titre Français"])
+    if 'Votes imdb' in df_filtered.columns:
+        fig = px.histogram(df_filtered, x="Votes imdb", nbins=20, color="Genre Principal", title="Distribution des Votes imdb", log_y=True, hover_data=["Titre Français"])
         st.plotly_chart(fig)
 
-    st.subheader("Nombre de Films par Année")
-    if 'Année' in df_filtered.columns:
-        films_par_annee = df.groupby("Année").size().reset_index(name="Nombre de Films")
-        fig = px.line(films_par_annee, x="Année", y="Nombre de Films", title="Evolution du Nombre de Films par Année")
+    st.subheader("Nombre de Films par Date de Sortie")
+    if 'Date de Sortie' in df_filtered.columns:
+        films_par_annee = df.groupby("Date de Sortie").size().reset_index(name="Nombre de Films")
+        fig = px.line(films_par_annee, x="Date de Sortie", y="Nombre de Films", title="Evolution du Nombre de Films par Date de Sortie")
         st.plotly_chart(fig)
 
     st.subheader("Distribution des Durées des Films")
-    if 'Durée (minutes)' in df_filtered.columns:
-        fig = px.box(df, y="Durée (minutes)", title="Distribution des Durées des Films")
-        fig.update_layout(yaxis_title="Durée (minutes)")
+    if 'Durée' in df_filtered.columns:
+        fig = px.box(df, y="Durée", title="Distribution des Durées des Films")
+        fig.update_layout(yaxis_title="Durée")
         st.plotly_chart(fig)
 
-    st.subheader("Relation entre Note et Popularité")
-    if 'Note' in df_filtered.columns:
-        fig = px.scatter(df, x="Note", y="Popularité", color="Popularité", hover_data=["Titre Français"])
-        fig.update_layout(xaxis_title="Note", yaxis_title="Popularité")
+    st.subheader("Relation entre Note et Réputation")
+    if 'Note imdb' in df_filtered.columns:
+        fig = px.scatter(df, x="Note imdb", y="Réputation", color="Réputation", hover_data=["Titre Français"])
+        fig.update_layout(xaxis_title="Note imdb", yaxis_title="Réputation")
         st.plotly_chart(fig)
 
     st.subheader("Top 10 des Films")
-    if 'Genre Principal' in df.columns and 'Votes' in df.columns:
-        top_popular_movies = df.nlargest(10, 'Votes')[["Titre Français", "Votes", "Genre Principal"]]
+    if 'Genre Principal' in df.columns and 'Votes imdb' in df.columns:
+        top_popular_movies = df.nlargest(10, 'Votes imdb')[["Titre Français", "Votes imdb", "Genre Principal"]]
     
         fig = px.bar(top_popular_movies, 
                  x="Titre Français", 
-                 y="Votes", 
+                 y="Votes imdb", 
                  color="Genre Principal",
                  title="Top 10 des Films les Plus Populaires",
                  color_continuous_scale='Viridis')
     
-        fig.update_layout(xaxis_title="Titre du Film", yaxis_title="Votes")
+        fig.update_layout(xaxis_title="Titre du Film", yaxis_title="Votes imdb")
     
         st.plotly_chart(fig)
     else:
-        st.warning("Les colonnes 'Popularité' ou 'Votes' sont manquantes dans les données.")
+        st.warning("Les colonnes 'Réputation' ou 'Votes imdb' sont manquantes dans les données.")
 
 
 
@@ -191,7 +193,7 @@ def custom_chart(df):
             return
     elif chart_type == "Bubble Chart":
         if df[x_axis].dtype in ['int64', 'float64'] and df[y_axis].dtype in ['int64', 'float64']:
-            fig = px.scatter(df, x=x_axis, y=y_axis, size="Popularité", color=hue_column, hover_data=["Titre Français"])
+            fig = px.scatter(df, x=x_axis, y=y_axis, size="Réputation", color=hue_column, hover_data=["Titre Français"])
         else:
             st.warning("Le Bubble Chart nécessite des colonnes numériques.")
             return
@@ -207,17 +209,17 @@ st.sidebar.subheader("Analyse Intéractive")
 if st.sidebar.checkbox("Your Own Chart 📈"):
     custom_chart(df_filtered)
 
-# Suggestion de films par popularité et genre
+# Suggestion de films par Réputation et genre
 def movie_suggester(df):
     st.markdown("# Pocket Suggester 👝")
-    st.subheader("Suggestion par Popularité")
-    selected_popularity = st.radio("Filtrer par Popularité", df["Popularité"].unique(), index=0)
-    suggested_movies = df[df["Popularité"] == selected_popularity][["Réalisateur(s)", "Titre Français", "Note", "Genres"]]
+    st.subheader("Suggestion par Réputation")
+    selected_popularity = st.radio("Filtrer par Réputation", df["Réputation"].unique(), index=0)
+    suggested_movies = df[df["Réputation"] == selected_popularity][["Réalisateur(s)", "Titre Français", "Note imdb", "Genres"]]
     st.write(suggested_movies)
 
     st.subheader("Suggestion par Genre Principal")
     selected_genre = st.radio("Filtrer par Genre", df["Genre Principal"].unique(), index=0)
-    suggested_movies = df[df["Genre Principal"] == selected_genre][["Réalisateur(s)", "Titre Français", "Note", "Genres", "Popularité"]]
+    suggested_movies = df[df["Genre Principal"] == selected_genre][["Réalisateur(s)", "Titre Français", "Note imdb", "Genres", "Réputation"]]
     st.write(suggested_movies)
 
 st.sidebar.subheader("Analyse Suggestion")
