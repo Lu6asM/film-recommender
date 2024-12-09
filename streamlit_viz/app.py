@@ -14,6 +14,7 @@ def load_data():
         # Application des transformations sur les colonnes
         df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         df["Réalisateur(s)"] = df["Réalisateur(s)"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
+        df["Acteurs"] = df["Acteurs"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
         return df
     except FileNotFoundError:
         st.error("Le fichier 'df_movie_cleaned.csv' est introuvable.")
@@ -124,7 +125,6 @@ def primary_analysis(df):
 
 
 
-
 # Fonction pour créer des graphiques personnalisés
 def custom_chart(df):
     st.markdown("# Your Own Chart 📈")
@@ -200,27 +200,79 @@ def custom_chart(df):
 
     st.plotly_chart(fig)
 
+
+
+# Fonction de suggesteur de films
+def movie_suggester(df):
+    st.markdown("# Pocket Suggester 👝")
+
+    # Sélection par Réputation
+    st.subheader("Suggestion par Réputation")
+    selected_popularity = st.radio("Filtrer par Réputation", df["Réputation"].unique(), index=0)
+    suggested_movies = df[df["Réputation"] == selected_popularity][["Réalisateur(s)", "Titre Français", "Note imdb", "Note tmdb", "Genres"]]
+    st.write(suggested_movies)
+
+    # Sélection par Genre Principal
+    st.subheader("Suggestion par Genre Principal")
+    selected_genre = st.selectbox("Filtrer par Genre", df["Genre Principal"].unique(), index=0)
+    suggested_movies = df[df["Genre Principal"] == selected_genre][["Réalisateur(s)", "Titre Français", "Note imdb", "Note tmdb", "Genres", "Réputation"]]
+    st.write(suggested_movies)
+
+    # Recherche par Réalisateur
+    st.subheader("Suggestion par Réalisateur")
+    selected_director = st.text_input("Filtrer par Réalisateur", "")
+    if selected_director:
+        # Convertit toutes les valeurs en chaînes de caractères, même si elles étaient précédemment des objets autres que des chaînes
+        df['Réalisateur(s) cherché'] = df['Réalisateur(s)'].astype(str).str.lower().str.replace(" ", "")
+
+        # Suppression des valeurs vides ou NaN
+        df = df.dropna(subset=['Réalisateur(s) cherché'])
+
+        # Nettoyage du nom du réalisateur sélectionné
+        selected_director_clean = selected_director.lower().strip("[]").replace("'", "")
+
+        # Filtrer les films qui contiennent le nom de réalisateur correspondant
+        suggested_movies = df[df['Réalisateur(s) cherché'].str.contains(selected_director_clean, na=False)][["Réalisateur(s)", "Titre Français", "Note imdb", "Note tmdb", "Genres", "Réputation"]]
+
+        if not suggested_movies.empty:
+            st.write(suggested_movies)
+        else:
+            st.write("Aucun film trouvé pour le réalisateur spécifié.")
+
+    # Recherche par Acteurs
+    st.subheader("Suggestion par Acteurs")
+    selected_director = st.text_input("Filtrer par Acteurs", "")
+    if selected_director:
+        # Convertit toutes les valeurs en chaînes de caractères, même si elles étaient précédemment des objets autres que des chaînes
+        df['Acteurs cherché'] = df['Acteurs'].astype(str).str.lower().str.replace(" ", "")
+
+        # Suppression des valeurs vides ou NaN
+        df = df.dropna(subset=['Acteurs cherché'])
+
+        # Nettoyage du nom du Acteurs sélectionné
+        selected_director_clean = selected_director.lower().strip("[]").replace("'", "")
+
+        # Filtrer les films qui contiennent le nom de Acteurs correspondant
+        suggested_movies = df[df['Acteurs cherché'].str.contains(selected_director_clean, na=False)][["Acteurs", "Titre Français", "Note imdb", "Note tmdb", "Genres", "Réputation"]]
+
+        if not suggested_movies.empty:
+            st.write(suggested_movies)
+        else:
+            st.write("Aucun film trouvé pour le Acteurs spécifié.")
+
+
+
 # Sidebar pour choisir les sections
 st.sidebar.subheader("Analyse")
 if st.sidebar.checkbox("Analyse Primaire 🔍"):
     primary_analysis(df_filtered)
 
+
+
 st.sidebar.subheader("Analyse Intéractive")
 if st.sidebar.checkbox("Your Own Chart 📈"):
     custom_chart(df_filtered)
 
-# Suggestion de films par Réputation et genre
-def movie_suggester(df):
-    st.markdown("# Pocket Suggester 👝")
-    st.subheader("Suggestion par Réputation")
-    selected_popularity = st.radio("Filtrer par Réputation", df["Réputation"].unique(), index=0)
-    suggested_movies = df[df["Réputation"] == selected_popularity][["Réalisateur(s)", "Titre Français", "Note imdb", "Genres"]]
-    st.write(suggested_movies)
-
-    st.subheader("Suggestion par Genre Principal")
-    selected_genre = st.radio("Filtrer par Genre", df["Genre Principal"].unique(), index=0)
-    suggested_movies = df[df["Genre Principal"] == selected_genre][["Réalisateur(s)", "Titre Français", "Note imdb", "Genres", "Réputation"]]
-    st.write(suggested_movies)
 
 st.sidebar.subheader("Analyse Suggestion")
 if st.sidebar.checkbox("Pocket Suggester 👝"):
