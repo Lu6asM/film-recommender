@@ -1,192 +1,196 @@
+# **data_cleaning.py**
+# ===============================================
+# Script de nettoyage et de préparation des datasets IMDb et TMDB
+# ===============================================
+
 import pandas as pd
-#! === IMPORT ===
-#* Les datasets importants
-df_title_basics = pd.read_csv('https://datasets.imdbws.com/title.basics.tsv.gz', sep = '\t', compression='gzip', na_values='\\N')
-df_title_ratings = pd.read_csv('https://datasets.imdbws.com/title.ratings.tsv.gz', sep = '\t', compression='gzip', na_values='\\N')
-
-#* Les datasets intéressants
-df_title_akas = pd.read_csv('https://datasets.imdbws.com/title.akas.tsv.gz', sep = '\t', compression='gzip', na_values='\\N')
-df_title_crew = pd.read_csv('https://datasets.imdbws.com/title.crew.tsv.gz', sep = '\t', compression='gzip', na_values='\\N')
-df_name_basics = pd.read_csv('https://datasets.imdbws.com/name.basics.tsv.gz', sep = '\t', compression='gzip', na_values='\\N')
-df_title_principals = pd.read_csv('https://datasets.imdbws.com/title.principals.tsv.gz', sep='\t', compression='gzip', na_values='\\N')
+import os
 
 
 
-#! === SETUP ===
-#? title_basics
-
-#* Garder uniquement les films
-df_title_basics_clean = df_title_basics[df_title_basics['titleType'] == 'movie']
-
-#* Supprimer les lignes avec des données manquantes essentielles
-df_title_basics_clean = df_title_basics_clean.dropna(subset=['startYear', 'genres'])
-
-#* Convertir startYear en entier et filtrer les années valides
-df_title_basics_clean['startYear'] = df_title_basics_clean['startYear'].astype(int)
-df_title_basics_clean = df_title_basics_clean[(df_title_basics_clean['startYear'] >= 1970) & (df_title_basics_clean['startYear'] <= 2024)]
-
-#* Garder les colonnes essentiels
-df_title_basics_clean = df_title_basics_clean[['tconst', 'primaryTitle', 'startYear', 'genres', 'runtimeMinutes']]
-
-
-#? title_rating
-
-#* Supprimer les films avec peu de votes
-df_title_ratings_clean = df_title_ratings[df_title_ratings['numVotes'] > 1000]
-
-
-#? title_akas
-
-#* Garder uniquement les titres de film français
-df_title_akas_clean = df_title_akas[df_title_akas['region'] == 'FR']
-
-#* Garder les colonnes essentiels
-df_title_akas_clean = df_title_akas_clean[['titleId', 'title']]
-
-#* Renommer l'identifiant
-df_title_akas_clean.rename(columns={'titleId' : 'tconst'}, inplace=True)
-
-
-#? title_crew
-
-#* Remplir les valeurs manquantes avec un indicateur, par exemple 'Unknown'
-df_title_crew_clean = df_title_crew.fillna({'directors': 'Unknown'})
-
-#* Transformer la colonne 'directors' en une liste
-df_title_crew_clean['directors'] = df_title_crew_clean['directors'].str.split(',')
-
-#* Exploser la colonne 'directors' en lignes individuelles
-df_title_crew_clean = df_title_crew_clean.explode('directors')
-
-#* Fusionner les 'directors' avec 'name_basics' pour obtenir les 'primaryName'
-title_crew_with_directors = df_title_crew_clean.merge(df_name_basics[['nconst', 'primaryName']], 
-                                                     how='left', 
-                                                     left_on='directors', 
-                                                     right_on='nconst')
-
-#* Regrouper les résultats par 'tconst' pour remettre les réalisateurs sous forme de liste
-title_crew_with_directors = title_crew_with_directors.groupby('tconst')['primaryName'].apply(list).reset_index()
-
-
-#? title_principals
-
-#* Supprimer les lignes avec des valeurs manquantes dans 'category'
-df_title_principals_clean = df_title_principals.dropna(subset=['category'])
-
-#* Filtrer les acteurs dans title.principals
-df_title_principals_clean = df_title_principals_clean[df_title_principals_clean['category'] == 'actor']
-
-#* Fusionner avec name.basics pour obtenir les noms des acteurs
-actors_with_names = pd.merge(df_title_principals_clean, df_name_basics[['nconst', 'primaryName']], on='nconst', how='left')
-
-#* Créer une liste d'acteurs par film
-actors_list_per_film = actors_with_names.groupby('tconst')['primaryName'].apply(list).reset_index()
+# ===============================================
+# **1. Chargement des Datasets IMDb**
+# ===============================================
+def load_imdb_data():
+    """Charge les datasets IMDb nécessaires."""
+    print("Étape 1 : Chargement des datasets IMDb...")
+    df_title_basics = pd.read_csv('https://datasets.imdbws.com/title.basics.tsv.gz', sep='\t', compression='gzip', na_values='\\N', low_memory=False)
+    df_title_ratings = pd.read_csv('https://datasets.imdbws.com/title.ratings.tsv.gz', sep='\t', compression='gzip', na_values='\\N', low_memory=False)
+    df_title_akas = pd.read_csv('https://datasets.imdbws.com/title.akas.tsv.gz', sep='\t', compression='gzip', na_values='\\N', low_memory=False)
+    df_title_crew = pd.read_csv('https://datasets.imdbws.com/title.crew.tsv.gz', sep='\t', compression='gzip', na_values='\\N', low_memory=False)
+    df_name_basics = pd.read_csv('https://datasets.imdbws.com/name.basics.tsv.gz', sep='\t', compression='gzip', na_values='\\N', low_memory=False)
+    df_title_principals = pd.read_csv('https://datasets.imdbws.com/title.principals.tsv.gz', sep='\t', compression='gzip', na_values='\\N', low_memory=False)
+    print("Étape 1 terminée : Datasets IMDb chargés.")
+    return df_title_basics, df_title_ratings, df_title_akas, df_title_crew, df_name_basics, df_title_principals
 
 
 
-#! === MERGEUP ===
-#* Merge de title_basics & title_ratings
-df_merged_v1 = df_title_basics_clean.merge(df_title_ratings_clean, on="tconst")
+# ===============================================
+# **2. Nettoyage des Datasets IMDb**
+# ===============================================
+def clean_title_basics(df):
+    print("Étape 2.1 : Nettoyage du dataset title.basics...")
+    result = (
+        df[df['titleType'] == 'movie']
+        .dropna(subset=['startYear', 'genres'])
+        .assign(startYear=lambda x: x['startYear'].astype(int))
+        .query('1970 <= startYear <= 2025')
+        [['tconst', 'primaryTitle']]
+    )
+    print("Étape 2.1 terminée : title.basics nettoyé.")
+    return result
 
-#* Merge de df_merged_v1 & df_title_akas
-df_merged_v2 = df_merged_v1.merge(df_title_akas_clean, on='tconst', how='left')
+def clean_title_ratings(df):
+    print("Étape 2.2 : Nettoyage du dataset title.ratings...")
+    result = df[df['numVotes'] > 1000]
+    print("Étape 2.2 terminée : title.ratings nettoyé.")
+    return result
 
-#* Merge de df_merged_v2 & title_crew_with_directors
-df_merged_v3 = df_merged_v2.merge(title_crew_with_directors, on='tconst', how='left')
+def clean_title_akas(df):
+    print("Étape 2.3 : Nettoyage du dataset title.akas...")
+    result = (
+        df[df['region'] == 'FR']
+        [['titleId', 'title']]
+        .rename(columns={'titleId': 'tconst', 'title': 'Titre Français'})
+    )
+    print("Étape 2.3 terminée : title.akas nettoyé.")
+    return result
 
-#* Merge de df_merged_v3 & actors_list_per_film
-df_merged_v3['Acteurs'] = df_merged_v3['tconst'].map(dict(zip(actors_list_per_film['tconst'], actors_list_per_film['primaryName'])))
+def clean_title_crew(df_crew, df_names):
+    print("Étape 2.4 : Nettoyage du dataset title.crew...")
+    result = (
+        df_crew.fillna({'directors': 'Unknown'})
+        .assign(directors=lambda x: x['directors'].str.split(','))
+        .explode('directors')
+        .merge(df_names[['nconst', 'primaryName']], left_on='directors', right_on='nconst', how='left')
+        .groupby('tconst')['primaryName'].apply(list).reset_index()
+    )
+    print("Étape 2.4 terminée : title.crew nettoyé.")
+    return result
 
-
-
-#! === EXPORT ===
-df_merged_v3.to_csv("../data/raw/df_movie.csv", index=False)
-
-
-
-#! === RENAMEUP ===
-df_movie = df_merged_v3
-
-#* Renommer les colonnes du dataframe
-df_movie.rename(columns={'tconst': 'ID',
-                         'primaryTitle': 'Titre Original',
-                         'startYear': 'Année',
-                         'genres':  'Genres', 
-                         'runtimeMinutes': 'Durée (minutes)',
-                         'averageRating': 'Note',
-                         'numVotes': 'Votes',
-                         'title': 'Titre Français',
-                         'primaryName': 'Réalisateur(s)'}, inplace=True)
-
-
-
-#! === ADDUP ===
-#* Ajout de la colonne 'popularité'
-def categorize_votes(votes):
-    if votes < 25000:
-        return "Connu"
-    elif 25000 <= votes < 100000:
-        return "Populaire"
-    elif 100000 <= votes < 500000:
-        return "Très populaire"
-    else:
-        return "Blockbuster"
-
-df_movie['Popularité'] = df_movie['Votes'].apply(categorize_votes)
-
-#* Ajout de la colonne "métrage"
-def categorize_times(duree):
-    if duree < 60:
-        return "Court-métrage"
-    elif 60 <= duree <= 90:
-        return "Moyen-métrage"
-    else:
-        return "Long-métrage"
-
-df_movie['Métrage'] = df_movie['Durée (minutes)'].apply(categorize_times)
-
-#* Ajout de la colonne 'décennie'
-def categorize_years(year):
-    if 1970 <= year <= 1979:
-        return "70°s"
-    if 1980 <= year <= 1989:
-        return "80°s"
-    if 1990 <= year <= 1999:
-        return "90°s"
-    if 2000 <= year <= 2009:
-        return "2000"
-    if 2010 <= year <= 2019:
-        return "2010"
-    if 2020 <= year <= 2029:
-        return "2020"
-
-df_movie['Décennie'] = df_movie['Année'].apply(categorize_years)
-
-#* Repositionner les colonnes
-df_movie = df_movie[['ID', 'Réalisateur(s)', 'Titre Original', 'Titre Français', 'Métrage', 'Durée (minutes)', 'Année', 'Décennie', 'Genres', 'Note', 'Votes', 'Popularité', 'Acteurs']]
+def clean_title_principals(df_principals, df_names):
+    print("Étape 2.5 : Nettoyage du dataset title.principals...")
+    result = (
+        df_principals.dropna(subset=['category'])
+        .query("category == 'actor'")
+        .merge(df_names[['nconst', 'primaryName']], on='nconst', how='left')
+        .groupby('tconst')['primaryName'].apply(list).reset_index()
+    )
+    print("Étape 2.5 terminée : title.principals nettoyé.")
+    return result
 
 
 
-#! === CLEANUP V1 ===
-#* Supprimer les doublons
-df_movie_cleaned_v1 = df_movie.drop_duplicates(subset='ID')
+# ===============================================
+# **3. Fusion des Datasets IMDb**
+# ===============================================
+def merge_imdb_data(df_basics, df_ratings, df_akas, df_crew, df_principals):
+    """Fusionne tous les datasets IMDb nettoyés."""
+    df_merged = df_basics.merge(df_ratings, on='tconst')
+    df_merged = df_merged.merge(df_akas, on='tconst', how='left')
+    df_merged = df_merged.merge(df_crew, on='tconst', how='left')
+    df_merged['Acteurs'] = df_merged['tconst'].map(dict(zip(df_principals['tconst'], df_principals['primaryName'])))
+    
+    # Renommage des colonnes après fusion pour plus de clarté
+    df_merged.rename(columns={
+        'tconst': 'ID',
+        'primaryTitle': 'Titre',
+        'numVotes': 'Nombre de Votes',
+        'Titre Français': 'Titre en Français',
+        'primaryName': 'Réalisateur',
+        'Acteurs': 'Acteurs'
+    }, inplace=True)
+    
+    return df_merged
 
-#* Supprimer les films avec moins de 15 000 votes
-df_movie_cleaned_v1 = df_movie_cleaned_v1[df_movie_cleaned_v1['Votes'] > 15000]
-
-#* Remplacer les valeurs manquantes dans 'Titre Français' par les valeurs de 'Titre'
-df_movie_cleaned_v1['Titre Français'] = df_movie_cleaned_v1['Titre Français'].fillna(df_movie_cleaned_v1['Titre Original'])
 
 
+# ===============================================
+# **4. Nettoyage du Dataset TMDB**
+# ===============================================
+def clean_tmdb_data(df):
+    print("Étape 4 : Nettoyage du dataset TMDB...")
+    df = df[[
+        'backdrop_path', 'budget', 'genres', 'imdb_id', 'original_language', 'popularity',
+        'poster_path', 'production_countries', 'release_date', 'revenue', 'runtime',
+        'spoken_languages', 'vote_average', 'vote_count', 'production_companies_name'
+    ]]
+    df.rename(columns={
+        'backdrop_path': 'Image de Fond',
+        'budget': 'Budget',
+        'genres': 'Genres',
+        'imdb_id': 'ID IMDb',
+        'original_language': 'Langue Originale',
+        'popularity': 'Popularité',
+        'poster_path': 'Affiche',
+        'production_countries': 'Pays de Production',
+        'release_date': 'Date de Sortie',
+        'revenue': 'Box Office',
+        'runtime': 'Durée',
+        'spoken_languages': 'Langues Parlées',
+        'vote_average': 'Note tmdb',
+        'vote_count': 'Votes tmdb',
+        'production_companies_name': 'Compagnies de Production'
+    }, inplace=True)
+    print("Étape 4 terminée : TMDB nettoyé.")
+    return df
 
-#! === CLEANUP V2 ===
-#* Supprimer les films avec une note inférieur à 5
-df_movie_cleaned_v2 = df_movie_cleaned_v1[df_movie_cleaned_v1['Note'] > 5]
-
-#* Supprimer les films avec une note inférieur à 8 et sortis avant 2000
-df_movie_cleaned_v2 = df_movie_cleaned_v2[~((df_movie_cleaned_v2['Note'] < 8) & (df_movie_cleaned_v2['Année'] < 2000))]
 
 
+# ===============================================
+# **5. Fusion IMDb et TMDB**
+# ===============================================
+def merge_final_data(df_movie, df_tmdb):
+    print("Étape 5 : Fusion des datasets IMDb et TMDB...")
+    result = pd.merge(df_movie, df_tmdb, left_on='ID', right_on='ID IMDb')
+    print("Étape 5 terminée : Fusion des datasets réalisée.")
+    return result
 
-#! === EXPORT ===
-df_movie_cleaned_v2.to_csv("../data/processed/df_movie_cleaned.csv", index=False)
+
+
+# ===============================================
+# **6. Exportation des Données**
+# ===============================================
+def export_data(df, path):
+    print(f"Étape 6 : Exportation des données vers {path}...")
+    df.to_csv(path, index=False)
+    print("Étape 6 terminée : Données exportées.")
+
+
+
+# ===============================================
+# **Exécution Principale**
+# ===============================================
+if __name__ == "__main__":
+    # Chargement des données
+    print("Chargement des datasets IMDb...")
+    df_title_basics, df_title_ratings, df_title_akas, df_title_crew, df_name_basics, df_title_principals = load_imdb_data()
+    
+    # Lecture du dataset TMDB
+    print("Lecture du dataset TMDB...")
+    df_tmdb = pd.read_csv("C:/Users/koke7/github/film-recommender/data/raw/tmdb_full.csv")
+    
+    # Nettoyage des données IMDb
+    print("Nettoyage du dataset IMDb...")
+    df_basics_clean = clean_title_basics(df_title_basics)
+    df_ratings_clean = clean_title_ratings(df_title_ratings)
+    df_akas_clean = clean_title_akas(df_title_akas)
+    df_crew_clean = clean_title_crew(df_title_crew, df_name_basics)
+    df_principals_clean = clean_title_principals(df_title_principals, df_name_basics)
+
+    # Fusion des données IMDb
+    print("Fusion des données IMDb...")
+    df_imdb_clean = merge_imdb_data(df_basics_clean, df_ratings_clean, df_akas_clean, df_crew_clean, df_principals_clean)
+    
+    # Nettoyage du dataset TMDB
+    print("Nettoyage du dataset TMDB...")
+    df_tmdb_clean = clean_tmdb_data(df_tmdb)
+    
+    # Fusion finale des données
+    print("Fusion des données IMDb et TMDB...")
+    df_final = merge_final_data(df_imdb_clean, df_tmdb_clean)
+
+    # Exportation des données
+    print("Exportation des données nettoyées...")
+    export_data(df_final, "C:/Users/koke7/github/film-recommender/data/processed/df_movie_cleaned.csv")
+    print("Nettoyage et exportation terminés.")
