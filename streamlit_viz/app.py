@@ -9,7 +9,7 @@ import numpy as np
 @st.cache_data
 def load_data():
     try:
-        url = "C:/Users/koke7/github/film-recommender/data/processed/df_movie_cleaned.csv"
+        url = "https://raw.githubusercontent.com/Lu6asM/film-recommender/refs/heads/main/data/processed/df_movie_cleaned.csv"
         df = pd.read_csv(url)
         # Application des transformations sur les colonnes
         df["Genres"] = df["Genres"].apply(lambda x: x.split(",") if isinstance(x, str) else x)
