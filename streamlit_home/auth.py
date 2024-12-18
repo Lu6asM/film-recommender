@@ -5,14 +5,15 @@ import os
 from datetime import datetime
 
 class AuthManager:
-    def __init__(self, db_path="../data/film_recommender.db"):  # Changer le chemin
-       self.db_path = db_path
+    def __init__(self):  # Changer le chemin
+       self.db_path = os.path.join(os.getcwd(), ".streamlit", "film_recommender.db")
        self.init_database()
 
     def init_database(self):
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        
         conn = None
         try:
-            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
 
