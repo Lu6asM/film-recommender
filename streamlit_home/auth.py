@@ -1,6 +1,7 @@
 import sqlite3
 import streamlit as st
 import hashlib
+import os
 from datetime import datetime
 
 class AuthManager:
@@ -9,7 +10,9 @@ class AuthManager:
        self.init_database()
 
     def init_database(self):
+        conn = None
         try:
+            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
 
