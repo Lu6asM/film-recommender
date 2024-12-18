@@ -43,7 +43,8 @@ class AuthManager:
             print(f"Erreur lors de l'initialisation de la base de données : {e}")
 
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
     def hash_password(self, password):
         return hashlib.sha256(password.encode()).hexdigest()
