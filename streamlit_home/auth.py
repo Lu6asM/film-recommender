@@ -216,12 +216,11 @@ def sidebar_favorites(movies_df):
     if user_id:
         auth = AuthManager()
         favorites = auth.get_favorites(user_id)
-        print(f"Debug - Affichage favoris: {favorites}")  # Debug log
         
         if favorites:
             st.sidebar.markdown("### ❤️ Vos Favoris")
             fav_movies = movies_df[movies_df['ID tmdb'].astype(str).isin([str(f) for f in favorites])]
-            print(f"Debug - Films trouvés: {len(fav_movies)}")  # Debug log
             
             for _, movie in fav_movies.iterrows():
-                st.sidebar.markdown(f"- {movie['Titre Original']}")
+                # Créer un lien cliquable vers la page du film
+                st.sidebar.markdown(f"- [{movie['Titre Original']}](Film?id={movie['ID tmdb']})")
