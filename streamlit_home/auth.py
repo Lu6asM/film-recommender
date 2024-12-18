@@ -17,7 +17,7 @@ class AuthManager:
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
 
-            st.write(f"Connexion à la DB : {self.db_path}")  # Debug log
+            print(f"Connexion à la DB : {self.db_path}")  # Debug log
 
             # Table utilisateurs
             c.execute('''
@@ -87,7 +87,7 @@ class AuthManager:
             c.execute('SELECT movie_id FROM favorites WHERE user_id = ?', (user_id,))
             results = c.fetchall()
             favorites = [r[0] for r in results]
-            st.write(f"Debug - Favoris user {user_id}: {favorites}")  # Debug log
+            print(f"Debug - Favoris user {user_id}: {favorites}")  # Debug log
             return favorites
         except Exception as e:
             st.error(f"Erreur get_favorites: {e}")
@@ -103,7 +103,7 @@ class AuthManager:
             c.execute('INSERT INTO favorites (user_id, movie_id) VALUES (?, ?)',
                      (user_id, movie_id))
             conn.commit()
-            st.write(f"Debug - Ajout favori: user={user_id}, film={movie_id}")  # Debug log
+            print(f"Debug - Ajout favori: user={user_id}, film={movie_id}")  # Debug log
             return True
         except Exception as e:
             st.error(f"Erreur add_favorite: {e}")
@@ -119,7 +119,7 @@ class AuthManager:
             c.execute('DELETE FROM favorites WHERE user_id = ? AND movie_id = ?',
                      (user_id, movie_id))
             conn.commit()
-            st.write(f"Debug - Suppression favori: user={user_id}, film={movie_id}")  # Debug log
+            print(f"Debug - Suppression favori: user={user_id}, film={movie_id}")  # Debug log
         except Exception as e:
             st.error(f"Erreur remove_favorite: {e}")
         finally:
@@ -138,7 +138,7 @@ def auth_component():
         st.session_state.favorites = []
     
     # Affichage état session (debug)
-    st.write("Debug - Session state:", dict(st.session_state))  # Debug log
+    print("Debug - Session state:", dict(st.session_state))  # Debug log
     
     if st.session_state.user_id is None:
         st.sidebar.markdown("### 👤 Connexion")
@@ -216,12 +216,12 @@ def sidebar_favorites(movies_df):
     if user_id:
         auth = AuthManager()
         favorites = auth.get_favorites(user_id)
-        st.write(f"Debug - Affichage favoris: {favorites}")  # Debug log
+        print(f"Debug - Affichage favoris: {favorites}")  # Debug log
         
         if favorites:
             st.sidebar.markdown("### ❤️ Vos Favoris")
             fav_movies = movies_df[movies_df['ID tmdb'].astype(str).isin([str(f) for f in favorites])]
-            st.write(f"Debug - Films trouvés: {len(fav_movies)}")  # Debug log
+            print(f"Debug - Films trouvés: {len(fav_movies)}")  # Debug log
             
             for _, movie in fav_movies.iterrows():
                 st.sidebar.markdown(f"- {movie['Titre Original']}")
