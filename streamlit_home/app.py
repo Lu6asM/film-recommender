@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 @st.cache_data
-def charger_donnees_films(chemin_fichier='../data/processed/df_movie_cleaned.csv'):
+def charger_donnees_films(chemin_fichier='https://raw.githubusercontent.com/Lu6asM/film-recommender/refs/heads/main/data/processed/df_movie_cleaned.csv'):
     try:
         df = pd.read_csv(chemin_fichier)
         df['genres'] = df['Genres'].str.split(', ')

@@ -133,7 +133,7 @@ def main():
         st.title("🏆 Top Films")
         
         # Charger les données
-        movies_df = charger_donnees_films('../data/processed/df_movie_cleaned.csv')
+        movies_df = charger_donnees_films('https://raw.githubusercontent.com/Lu6asM/film-recommender/refs/heads/main/data/processed/df_movie_cleaned.csv')
 
         # Authentification
         user_id = auth_component()
