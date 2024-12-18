@@ -134,7 +134,7 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         if st.button("Découvrir", key="btn_pour_vous", use_container_width=True):
-            st.switch_page("pages/recommandations.py")
+            st.switch_page("pages/1_✨_Pour_Vous.py")
 
     with col2:
         st.markdown("""
@@ -145,7 +145,7 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         if st.button("Explorer", key="btn_trending", use_container_width=True):
-            st.switch_page("pages/top_movies.py")
+            st.switch_page("pages/3_🏆_A_l'affiche.py")
 
     with col3:
         st.markdown("""
@@ -156,7 +156,7 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         if st.button("Rechercher", key="btn_explorer", use_container_width=True):
-            st.switch_page("pages/recherche.py")
+            st.switch_page("pages/2_🔍_Découvrir.py")
 
     # Section Comment ça marche
     st.markdown("### 🛠️ Notre Technologie")

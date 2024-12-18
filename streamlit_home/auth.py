@@ -4,37 +4,46 @@ import hashlib
 from datetime import datetime
 
 class AuthManager:
-    def __init__(self, db_path="film_recommender.db"):
-        self.db_path = db_path
-        self.init_database()
+    def __init__(self, db_path="../data/film_recommender.db"):  # Changer le chemin
+       self.db_path = db_path
+       self.init_database()
 
     def init_database(self):
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        
-        # Table utilisateurs
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
-        
-        # Table favoris
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS favorites (
-            user_id INTEGER,
-            movie_id TEXT,
-            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (user_id),
-            PRIMARY KEY (user_id, movie_id)
-        )
-        ''')
-        
-        conn.commit()
-        conn.close()
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            print(f"Création/connexion à la base de données : {self.db_path}")
+
+            # Table utilisateurs
+            c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            ''')
+
+            # Table favoris
+            c.execute('''
+            CREATE TABLE IF NOT EXISTS favorites (
+                user_id INTEGER,
+                movie_id TEXT,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (user_id),
+                PRIMARY KEY (user_id, movie_id)
+            )
+            ''')
+
+            conn.commit()
+            print("Tables créées avec succès")
+
+        except Exception as e:
+            print(f"Erreur lors de l'initialisation de la base de données : {e}")
+
+        finally:
+            conn.close()
 
     def hash_password(self, password):
         return hashlib.sha256(password.encode()).hexdigest()
@@ -70,8 +79,10 @@ class AuthManager:
             c.execute('INSERT INTO favorites (user_id, movie_id) VALUES (?, ?)',
                      (user_id, movie_id))
             conn.commit()
+            print(f"Film {movie_id} ajouté aux favoris pour l'utilisateur {user_id}")
             return True
-        except sqlite3.IntegrityError:
+        except sqlite3.IntegrityError as e:
+            print(f"Erreur lors de l'ajout du favori : {e}")
             return False
         finally:
             conn.close()
