@@ -8,6 +8,7 @@ class AuthManager:
     def __init__(self):
         self.db_path = os.path.join(os.getcwd(), ".streamlit", "film_recommender.db")
         self.init_database()
+        self.check_session()
 
     def init_database(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
@@ -16,9 +17,7 @@ class AuthManager:
         try:
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
-
-            print(f"Connexion à la DB : {self.db_path}")  # Debug log
-
+            
             # Table utilisateurs
             c.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -48,6 +47,51 @@ class AuthManager:
         finally:
             if conn:
                 conn.close()
+
+    def check_session(self):
+        """Vérifie et restaure la session si elle existe"""
+        # Utiliser st.query_params au lieu de st.experimental_get_query_params
+        params = st.query_params
+        
+        if 'user_id' in params and 'username' in params:
+            user_id = params['user_id']
+            username = params['username']
+            st.session_state.user_id = int(user_id)
+            st.session_state.username = username
+            st.session_state.favorites = self.get_favorites(user_id)
+            return True
+            
+        elif 'film_recommender_auth' in st.session_state:
+            stored_session = st.session_state.film_recommender_auth
+            if stored_session.get('user_id') and stored_session.get('username'):
+                st.session_state.user_id = stored_session['user_id']
+                st.session_state.username = stored_session['username']
+                st.session_state.favorites = self.get_favorites(stored_session['user_id'])
+                return True
+                
+        return False
+
+    def persist_session(self):
+        """Persiste la session dans l'URL"""
+        if st.session_state.user_id:
+            st.query_params['user_id'] = str(st.session_state.user_id)
+            st.query_params['username'] = st.session_state.username
+
+    def login_user(self, username, password):
+        user_id = self.verify_user(username, password)
+        if user_id:
+            st.session_state.user_id = user_id
+            st.session_state.username = username
+            st.session_state.favorites = self.get_favorites(user_id)
+            self.persist_session()
+            return True
+        return False
+
+    def logout_user(self):
+        for key in ['user_id', 'username', 'favorites']:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.query_params.clear()()
 
     def hash_password(self, password):
         return hashlib.sha256(password.encode()).hexdigest()
@@ -86,9 +130,7 @@ class AuthManager:
             c = conn.cursor()
             c.execute('SELECT movie_id FROM favorites WHERE user_id = ?', (user_id,))
             results = c.fetchall()
-            favorites = [r[0] for r in results]
-            print(f"Debug - Favoris user {user_id}: {favorites}")  # Debug log
-            return favorites
+            return [r[0] for r in results]
         except Exception as e:
             st.error(f"Erreur get_favorites: {e}")
             return []
@@ -100,10 +142,9 @@ class AuthManager:
         try:
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
-            c.execute('INSERT INTO favorites (user_id, movie_id) VALUES (?, ?)',
-                     (user_id, movie_id))
+            c.execute('INSERT OR IGNORE INTO favorites (user_id, movie_id) VALUES (?, ?)',
+                     (user_id, str(movie_id)))
             conn.commit()
-            print(f"Debug - Ajout favori: user={user_id}, film={movie_id}")  # Debug log
             return True
         except Exception as e:
             st.error(f"Erreur add_favorite: {e}")
@@ -117,9 +158,8 @@ class AuthManager:
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
             c.execute('DELETE FROM favorites WHERE user_id = ? AND movie_id = ?',
-                     (user_id, movie_id))
+                     (user_id, str(movie_id)))
             conn.commit()
-            print(f"Debug - Suppression favori: user={user_id}, film={movie_id}")  # Debug log
         except Exception as e:
             st.error(f"Erreur remove_favorite: {e}")
         finally:
@@ -129,18 +169,10 @@ class AuthManager:
 def auth_component():
     auth = AuthManager()
     
-    # Initialisation des variables de session
-    if 'user_id' not in st.session_state:
-        st.session_state.user_id = None
-    if 'username' not in st.session_state:
-        st.session_state.username = None
-    if 'favorites' not in st.session_state:
-        st.session_state.favorites = []
+    if not any(k in st.session_state for k in ['user_id', 'username', 'favorites']):
+        auth.check_session()
     
-    # Affichage état session (debug)
-    print("Debug - Session state:", dict(st.session_state))  # Debug log
-    
-    if st.session_state.user_id is None:
+    if not st.session_state.get('user_id'):
         st.sidebar.markdown("### 👤 Connexion")
         tab1, tab2 = st.sidebar.tabs(["Connexion", "Inscription"])
         
@@ -151,11 +183,7 @@ def auth_component():
                 submit = st.form_submit_button("Se connecter")
                 
                 if submit:
-                    user_id = auth.verify_user(username, password)
-                    if user_id:
-                        st.session_state.user_id = user_id
-                        st.session_state.username = username
-                        st.session_state.favorites = auth.get_favorites(user_id)
+                    if auth.login_user(username, password):
                         st.success("Connexion réussie!")
                         st.rerun()
                     else:
@@ -182,13 +210,12 @@ def auth_component():
     else:
         st.sidebar.markdown(f"### 👤 Connecté en tant que {st.session_state.username}")
         if st.sidebar.button("Se déconnecter"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
+            auth.logout_user()
             st.rerun()
     
     return st.session_state.get('user_id')
 
-def favorite_button(movie_id, movie_title, unique_key=""):
+def favorite_button(movie_id, movie_title, unique_key="", index=None):
     auth = AuthManager()
     user_id = st.session_state.get('user_id')
     
@@ -196,22 +223,19 @@ def favorite_button(movie_id, movie_title, unique_key=""):
         favorites = auth.get_favorites(user_id)
         is_favorite = str(movie_id) in [str(f) for f in favorites]
         
-        button_key = f"fav_{movie_id}_{unique_key}"
+        button_key = f"fav_{movie_id}_{unique_key}_{index}" if index is not None else f"fav_{movie_id}_{unique_key}_{id(movie_title)}"
         
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            if is_favorite:
-                if st.button("❤️", key=button_key):
-                    auth.remove_favorite(user_id, str(movie_id))
-                    st.session_state.favorites = auth.get_favorites(user_id)
-                    st.rerun()
-            else:
-                if st.button("🤍", key=button_key):
-                    auth.add_favorite(user_id, str(movie_id))
-                    st.session_state.favorites = auth.get_favorites(user_id)
-                    st.rerun()
+        if is_favorite:
+            if st.button("❤️", key=button_key, use_container_width=True):
+                auth.remove_favorite(user_id, str(movie_id))
+                st.rerun()
+        else:
+            if st.button("🤍", key=button_key, use_container_width=True):
+                auth.add_favorite(user_id, str(movie_id))
+                st.rerun()
+    return False
 
-def sidebar_favorites(movies_df):
+def sidebar_favorites(movies_df, page_name="main"):
     user_id = st.session_state.get('user_id')
     if user_id:
         auth = AuthManager()
@@ -219,8 +243,16 @@ def sidebar_favorites(movies_df):
         
         if favorites:
             st.sidebar.markdown("### ❤️ Vos Favoris")
-            fav_movies = movies_df[movies_df['ID tmdb'].astype(str).isin([str(f) for f in favorites])]
+            fav_movies = movies_df[movies_df['tmdb_id'].astype(str).isin([str(f) for f in favorites])]
             
-            for _, movie in fav_movies.iterrows():
-                # Créer un lien cliquable vers la page du film
-                st.sidebar.markdown(f"- [{movie['Titre Original']}](Film?id={movie['ID tmdb']})")
+            for idx, movie in fav_movies.iterrows():
+                col1, col2 = st.sidebar.columns([4, 1])
+                
+                with col1:
+                    st.write(f"{movie['title']}")
+                
+                with col2:
+                    button_key = f"show_similar_{page_name}_{movie['tmdb_id']}_{idx}"
+                    if st.button("👉", key=button_key, help="Voir les films similaires"):
+                        st.session_state.selected_movie = movie['title']
+                        st.rerun()
