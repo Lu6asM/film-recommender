@@ -113,26 +113,88 @@ def render_features_section():
 def render_technology_section():
     st.markdown("### 🛠️ Notre Technologie")
     
-    with st.expander("En savoir plus sur notre système de recommandation"):
-        tech_info = {
-            "Analyse des Données": [
-                "**Préférences utilisateurs** : Analyse approfondie des tendances",
-                "**Données historiques** : Exploitation des notes et avis",
-                "**Popularité** : Prise en compte des tendances actuelles"
-            ],
-            "Technologies Avancées": [
-                "**TF-IDF** : Analyse sémantique des descriptions",
-                "**Similarité Cosinus** : Mesure précise des correspondances",
-                "**Filtrage Collaboratif** : Recommandations personnalisées"
-            ]
-        }
+    with st.expander("💡 Comment fonctionne notre système de recommandation ?"):
+        # Utilisation de colonnes pour une meilleure organisation
+        left_col, right_col = st.columns([3, 2])
         
-        cols = st.columns(2)
-        for col, (title, items) in zip(cols, tech_info.items()):
-            with col:
-                st.markdown(f"#### 📊 {title}")
-                for item in items:
-                    st.markdown(f"- {item}")
+        with left_col:
+            st.markdown("""
+                #### 🎯 Notre Algorithme en un Coup d'Œil
+                
+                Notre système de recommandation utilise une approche sophistiquée basée sur plusieurs critères clés :
+                """)
+            
+            # Utilisation de progress bars pour visualiser les poids
+            st.markdown("##### Poids des critères dans l'analyse")
+            st.progress(0.4, "🎭 Genres (40%)")
+            st.progress(0.2, "🔑 Mots-clés (20%)")
+            st.progress(0.15, "🎬 Réalisateur (15%)")
+            st.progress(0.15, "🎭 Acteurs (15%)")
+            st.progress(0.1, "📝 Synopsis (10%)")
+
+        with right_col:
+            st.markdown("#### 🔬 Technologies Avancées")
+            st.markdown("Notre système s'appuie sur des technologies de pointe :")
+            
+            # Technologie 1
+            st.markdown("""
+                <div style='background-color: #131720; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>
+                    <div style='font-weight: bold;'>🧮 TF-IDF Vectorization</div>
+                    <div style='color: #666; font-style: italic;'>Analyse sémantique approfondie</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Technologie 2
+            st.markdown("""
+                <div style='background-color: #131720; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>
+                    <div style='font-weight: bold;'>📊 Similarité Cosinus</div>
+                    <div style='color: #666; font-style: italic;'>Mesure précise des correspondances</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Technologie 3
+            st.markdown("""
+                <div style='background-color: #131720; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>
+                    <div style='font-weight: bold;'>⚡ Traitement en Temps Réel</div>
+                    <div style='color: #666; font-style: italic;'>Recommandations instantanées</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Technologie 4
+            st.markdown("""
+                <div style='background-color: #131720; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>
+                    <div style='font-weight: bold;'>🔄 Mise à Jour Continue</div>
+                    <div style='color: #666; font-style: italic;'>Base de données enrichie régulièrement</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # Section bonus en bas de l'expander
+        st.markdown("---")
+        bonus_col1, bonus_col2, bonus_col3 = st.columns(3)
+        
+        with bonus_col1:
+            st.markdown("""
+                #### 🎯 Pertinence
+                Une précision accrue grâce à la pondération intelligente des critères
+            """)
+            
+        with bonus_col2:
+            st.markdown("""
+                #### ⚡ Performance
+                Résultats instantanés grâce à l'optimisation algorithmique
+            """)
+            
+        with bonus_col3:
+            st.markdown("""
+                #### 🔄 Évolution
+                Système qui s'améliore avec chaque nouvelle donnée
+            """)
+
+        # Note informative avec un style amélioré
+        st.info("""
+            **💡 Le saviez-vous ?** Notre système utilise un algorithme sophistiqué qui combine 5 critères principaux 
+            et analyse la proximité temporelle pour vous proposer des recommandations personnalisées !
+        """)
 
 def render_stats_section(stats):
     st.markdown("### 📈 Statistiques")
@@ -158,7 +220,7 @@ def render_footer():
     cols = st.columns([3, 1])
     
     with cols[0]:
-        st.markdown("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran")
+        st.markdown("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran, Anais Cid")
         st.caption("© 2024 Film Recommender | Tous droits réservés")
     
     with cols[1]:
