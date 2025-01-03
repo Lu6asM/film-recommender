@@ -6,7 +6,7 @@ from config import *
 from auth import auth_component, sidebar_favorites, favorite_button
 from util import (
     COMMON_STYLES,
-    render_main_movie,
+    render_movie_with_rank,
     load_movie_data,
 )
 import streamlit as st
@@ -35,7 +35,7 @@ def main():
             sidebar_favorites(movies_df)
 
         # Titre principal
-        st.title("✨ Recommander des films")
+        st.title("🏆 A l'affiche")
 
         # Chargement CSS personnalisé
         st.markdown("""
@@ -81,7 +81,7 @@ def main():
         # Affichage des films
         st.info(f"📽️ Top {nombre_films} des films triés par {tri_choix}")
         for rank, (_, movie) in enumerate(sorted_df.head(nombre_films).iterrows(), 1):
-            render_main_movie(movie, rank)
+            render_movie_with_rank(movie=movie, title_lang='fr', rank=rank)
 
     except Exception as e:
         st.error(f"❌ Une erreur s'est produite : {str(e)}")
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 st.markdown("---")
 footer_col1, footer_col2 = st.columns([3, 1])
 with footer_col1:
-   st.markdown("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran")
+   st.markdown("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran, Anais Cid")
    st.caption("© 2024 Film Recommender | Tous droits réservés")
 
 with footer_col2:
