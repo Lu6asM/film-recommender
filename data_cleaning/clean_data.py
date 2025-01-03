@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
+from pathlib import Path
 from functools import lru_cache
 
 # Configuration du logging
@@ -17,8 +18,9 @@ logging.basicConfig(
     ]
 )
 
-# Charger les variables d'environnement
-load_dotenv()
+env_path = Path('../.env')
+load_dotenv(dotenv_path=env_path, encoding='utf-8-sig')
+
 
 class MovieDataCleaner:
     def __init__(self, config: Dict = None):
@@ -60,7 +62,7 @@ class MovieDataCleaner:
         """
         try:
             return pd.read_csv(url_or_path, na_values='\\N', **kwargs)
-        except Exception as e:
+        except Exception as e: 
             logging.error(f"Erreur lors du chargement du fichier {url_or_path}: {e}")
             raise
 
@@ -95,6 +97,48 @@ class MovieDataCleaner:
                 if attempt == max_retries - 1:
                     logging.error(f"Impossible de récupérer les mots-clés pour le film {movie_id}")
                     return []
+
+    def get_movie_details_from_tmdb(self, movie_id, language='fr'):
+        """Récupère les détails du film depuis TMDb dans la langue spécifiée"""
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={self.tmdb_api_key}&language={language}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logging.warning(f"Erreur lors de la récupération des détails du film : {response.status_code}")
+            return None
+
+    def get_cast_with_roles(self, tmdb_id):
+        """Récupère le casting avec les rôles"""
+        url = f"https://api.themoviedb.org/3/movie/{tmdb_id}/credits?api_key={self.tmdb_api_key}"
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            data = response.json()
+            cast = data.get('cast', [])
+            actor_roles = [
+                f"{actor['name']} ({actor['character']})"
+                for actor in cast[:10]
+            ]
+            return ", ".join(actor_roles)
+        else:
+            return None
+
+    def remplacer_synopsis_par_overview_fr(self, df):
+        """Remplace la colonne 'Synopsis' par le synopsis en français"""
+        required_columns = ['ID tmdb', 'Synopsis']
+        for col in required_columns:
+            if col not in df.columns:
+                logging.warning(f"La colonne '{col}' n'existe pas dans le DataFrame.")
+                return df
+
+        for index, row in df.iterrows():
+            movie_id = row['ID tmdb']
+            movie_details = self.get_movie_details_from_tmdb(movie_id, language='fr')
+            if movie_details:
+                df.at[index, 'Synopsis'] = movie_details.get('overview', '')
+
+        return df
 
     @staticmethod
     def categorize_votes(votes: int) -> str:
@@ -135,191 +179,205 @@ class MovieDataCleaner:
                 return label
         return None
 
-    def clean_data(self, output_path: str = '../data/cleaned/df_movie_cleaned.csv'):
-        """
-        Processus complet de nettoyage des données.
+    def _prepare_imdb_data(self) -> pd.DataFrame:
+        """Prépare les données IMDb."""
+        logging.info("Chargement et préparation des données IMDb")
         
-        Args:
-            output_path (str): Chemin de sauvegarde du fichier nettoyé
-        """
-        logging.info("Début du nettoyage des données")
-
-        # Chargement des données IMDb
-        logging.info("Chargement des datasets IMDb")
-        df_title_basics = self._safe_read_csv(
+        # Chargement des bases
+        title_basics = self._safe_read_csv(
             'https://datasets.imdbws.com/title.basics.tsv.gz', 
             sep='\t', compression='gzip'
         )
-        df_title_ratings = self._safe_read_csv(
+        title_ratings = self._safe_read_csv(
             'https://datasets.imdbws.com/title.ratings.tsv.gz', 
             sep='\t', compression='gzip'
         )
-        df_title_akas = self._safe_read_csv(
+        title_akas = self._safe_read_csv(
             'https://datasets.imdbws.com/title.akas.tsv.gz', 
             sep='\t', compression='gzip'
         )
-        df_title_crew = self._safe_read_csv(
-            'https://datasets.imdbws.com/title.crew.tsv.gz', 
-            sep='\t', compression='gzip'
-        )
-        df_name_basics = self._safe_read_csv(
-            'https://datasets.imdbws.com/name.basics.tsv.gz', 
-            sep='\t', compression='gzip'
-        )
-        df_title_principals = self._safe_read_csv(
-            'https://datasets.imdbws.com/title.principals.tsv.gz', 
-            sep='\t', compression='gzip'
-        )
-
-        # Nettoyage des données IMDb
-        logging.info("Nettoyage des données IMDb")
         
-        # Nettoyage title.basics
-        df_title_basics_clean = (
-            df_title_basics[df_title_basics['titleType'] == 'movie']
+        logging.info("Nettoyage des données IMDb de base")
+        df = (title_basics[title_basics['titleType'] == 'movie']
             .dropna(subset=['startYear', 'genres'])
             .assign(startYear=lambda x: x['startYear'].astype(int))
             .query('1970 <= startYear <= 2025')
-            [['tconst', 'primaryTitle']]
-        )
-
-        # Nettoyage title.ratings
-        df_title_ratings_clean = df_title_ratings[df_title_ratings['numVotes'] > 1000]
-
-        # Nettoyage title.akas
-        df_title_akas_clean = (
-            df_title_akas[df_title_akas['region'] == 'FR']
-            [['titleId', 'title']]
-            .rename(columns={'titleId': 'tconst', 'title': 'Titre Français'})
-        )
-
-        # Nettoyage title.crew
-        df_title_crew_clean = (
-            df_title_crew.fillna({'directors': 'Unknown'})
-            .assign(directors=lambda x: x['directors'].str.split(','))
-            .explode('directors')
-            .merge(df_name_basics[['nconst', 'primaryName']], left_on='directors', right_on='nconst', how='left')
-            .groupby('tconst')['primaryName'].apply(list).reset_index()
-        )
-
-        # Nettoyage title.principals
-        df_title_principals_clean = (
-            df_title_principals.dropna(subset=['category'])
-            .query("category == 'actor'")
-            .merge(df_name_basics[['nconst', 'primaryName']], on='nconst', how='left')
-            .groupby('tconst')['primaryName'].apply(list).reset_index()
-        )
-
-        # Fusion des datasets IMDb
-        logging.info("Fusion des datasets IMDb")
-        df_merged_v1 = df_title_basics_clean.merge(df_title_ratings_clean, on='tconst')
-        df_merged_v2 = df_merged_v1.merge(df_title_akas_clean, on='tconst', how='left')
-        df_merged_v3 = df_merged_v2.merge(df_title_crew_clean, on='tconst', how='left')
+            .merge(title_ratings[title_ratings['numVotes'] > 1000], on='tconst')
+            .merge(
+                title_akas[title_akas['region'] == 'FR'][['titleId', 'title']]
+                .rename(columns={'titleId': 'tconst', 'title': 'Titre Français'}),
+                on='tconst', how='left'
+            ))
         
-        # Ajout des acteurs
-        actors_map = dict(zip(df_title_principals_clean['tconst'], df_title_principals_clean['primaryName']))
-        df_merged_v3['Acteurs'] = df_merged_v3['tconst'].map(actors_map)
-
-        # Chargement des données TMDB
-        logging.info("Chargement des données TMDB")
-        df_tmdb = self._safe_read_csv('../data/raw/tmdb_full.csv')
-
-        # Nettoyage des colonnes pour le dataset IMDb
-        logging.info("Nettoyage des colonnes IMDb")
-        df_merged_v3.rename(columns={
+        logging.info("Préparation des données de casting IMDb")
+        name_basics = self._safe_read_csv(
+            'https://datasets.imdbws.com/name.basics.tsv.gz', 
+            sep='\t', compression='gzip'
+        )
+        crew = self._safe_read_csv(
+            'https://datasets.imdbws.com/title.crew.tsv.gz', 
+            sep='\t', compression='gzip'
+        )
+        principals = self._safe_read_csv(
+            'https://datasets.imdbws.com/title.principals.tsv.gz', 
+            sep='\t', compression='gzip'
+        )
+        
+        # Ajout réalisateurs
+        directors = (crew.fillna({'directors': 'Unknown'})
+                    .assign(directors=lambda x: x['directors'].str.split(','))
+                    .explode('directors')
+                    .merge(name_basics[['nconst', 'primaryName']], 
+                        left_on='directors', right_on='nconst', how='left')
+                    .groupby('tconst')['primaryName']
+                    .agg(list)
+                    .reset_index()
+                    .rename(columns={'primaryName': 'Réalisateur(s)'}))
+        
+        df = df.merge(directors, on='tconst', how='left')
+        
+        # Renommage final
+        df = df.rename(columns={
             'tconst': 'ID imdb',
             'primaryTitle': 'Titre Original',
             'averageRating': 'Note imdb',
             'numVotes': 'Votes imdb'
-        }, inplace=True)
+        })
         
-        # Nettoyage des colonnes TMDB
-        logging.info("Nettoyage des colonnes TMDB")
-        df_tmdb.rename(columns={
-            'id': 'ID tmdb',
-            'backdrop_path': 'Image de Fond',
-            'budget': 'Budget',
-            'genres': 'Genres',
-            'overview': 'Synopsis',
-            'original_language': 'Langue Originale',
-            'popularity': 'Popularité',
-            'poster_path': 'Affiche',
-            'production_countries': 'Pays de Production',
-            'release_date': 'Date de Sortie',
-            'revenue': 'Box Office',
-            'runtime': 'Durée',
-            'spoken_languages': 'Langues Parlées',
-            'vote_average': 'Note tmdb',
-            'vote_count': 'Votes tmdb',
-            'production_companies_name': 'Compagnies de Production'
-        }, inplace=True)
+        df["Titre Français"] = df["Titre Français"].fillna(df["Titre Original"])
+        
+        return df
 
-        # Nettoyage des listes dans les colonnes TMDB
+    def _prepare_tmdb_data(self) -> pd.DataFrame:
+        """Prépare les données TMDB."""
+        logging.info("Chargement et préparation des données TMDB")
+        cols_needed = [
+            'id', 'backdrop_path', 'budget', 'genres', 'imdb_id', 
+            'original_language', 'overview', 'popularity', 'poster_path', 
+            'production_countries', 'release_date', 'revenue', 'runtime',
+            'spoken_languages', 'vote_average', 'vote_count', 'production_companies'
+        ]
+        
+        df = (self._safe_read_csv('../data/raw/tmdb_full.csv')
+            [cols_needed]
+            .rename(columns={
+                'id': 'ID tmdb', 'backdrop_path': 'Image de Fond',
+                'budget': 'Budget', 'genres': 'Genres',
+                'overview': 'Synopsis', 'original_language': 'Langue Originale',
+                'popularity': 'Popularité', 'poster_path': 'Affiche',
+                'production_countries': 'Pays de Production',
+                'release_date': 'Date de Sortie', 'revenue': 'Box Office',
+                'runtime': 'Durée', 'spoken_languages': 'Langues Parlées',
+                'vote_average': 'Note tmdb', 'vote_count': 'Votes tmdb',
+                'production_companies': 'Compagnies de Production'
+            }))
+        
+        # Nettoyage des colonnes de type liste
         for col in ['Pays de Production', 'Compagnies de Production', 'Langues Parlées', 'Genres']:
-            df_tmdb[col] = df_tmdb[col].apply(
-                lambda x: ', '.join(x) if isinstance(x, list) else x
-            ).str.strip('[]').str.replace("'", "")
+            df[col] = (df[col]
+                    .apply(lambda x: ', '.join(x) if isinstance(x, list) else x)
+                    .str.strip('[]')
+                    .str.replace("'", ""))
+        
+        return df
 
-        # Fusion finale des datasets
-        logging.info("Fusion finale des datasets")
-        df_final = pd.merge(df_merged_v3, df_tmdb, left_on='ID imdb', right_on='ID IMDb')
+    def _enrich_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Enrichit les données avec les API calls."""
+        logging.info("Enrichissement des données avec les API calls (peut prendre du temps)")
+        
+        logging.info("- Ajout des acteurs et leurs rôles")
+        df['Acteurs'] = df['ID tmdb'].apply(self.get_cast_with_roles)
+        
+        logging.info("- Mise à jour des synopsis en français")
+        df = self.remplacer_synopsis_par_overview_fr(df)
+        
+        logging.info("- Ajout des mots-clés")
+        df['Mots-Clés'] = df['ID tmdb'].apply(self.get_movie_keywords)
+        
+        return df
 
-        # Application des critères de filtrage
-        logging.info("Filtrage final des données")
-        df_movie_cleaned_v1 = df_final[
-            ((df_final['Votes imdb'] > 8000) & (df_final['Popularité'] > 5) & (df_final['Langue Originale'].str.contains('fr', case=False, na=False))) |
-            ((df_final['Votes imdb'] > 15000) & (df_final['Popularité'] > 7.5) & (df_final['Langues Parlées'].str.contains('French', case=False, na=False))) |
-            ((df_final['Votes imdb'] > 20000) & (df_final['Popularité'] > 10) & (df_final['Langue Originale'].str.contains('en', case=False, na=False))) |
-            ((df_final['Votes imdb'] > 50000) & (df_final['Popularité'] > 25))
-        ]
+    def _categorize_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Ajoute les catégorisations aux données."""
+        logging.info("Ajout des catégorisations")
+        return df.assign(
+            Réputation=lambda x: x['Votes imdb'].apply(self.categorize_votes),
+            Métrage=lambda x: x['Durée'].apply(self.categorize_times),
+            Décennie=lambda x: x['Date de Sortie'].apply(
+                lambda d: self.categorize_years(int(str(d)[:4])) if isinstance(d, str) else None
+            ),
+            Genre_Principal=lambda x: x['Genres'].str.split(',').str[0]
+        )
 
-        # Filtres additionnels
-        df_movie_cleaned_v2 = df_movie_cleaned_v1[
-            ~((df_movie_cleaned_v1['Note imdb'] < 4) & (df_movie_cleaned_v1['Note tmdb'] < 4) & (df_movie_cleaned_v1['Date de Sortie'] < '2024-01-01'))
+    def _apply_filters(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Applique tous les filtres de qualité."""
+        logging.info("Application des filtres de qualité")
+        
+        # Critères de popularité et langue
+        mask_popularity = (
+            ((df['Votes imdb'] > 8000) & (df['Popularité'] > 5) & 
+            (df['Langue Originale'].str.contains('fr', case=False, na=False))) |
+            ((df['Votes imdb'] > 15000) & (df['Popularité'] > 7.5) & 
+            (df['Langues Parlées'].str.contains('French', case=False, na=False))) |
+            ((df['Votes imdb'] > 20000) & (df['Popularité'] > 10) & 
+            (df['Langue Originale'].str.contains('en', case=False, na=False))) |
+            ((df['Votes imdb'] > 50000) & (df['Popularité'] > 25))
+        )
+        
+        df = df[mask_popularity].copy()
+        
+        # Filtres de notes et dates
+        df = df[
+            ~((df['Note imdb'] < 4) & (df['Note tmdb'] < 4) & 
+            (df['Date de Sortie'] < '2025-01-01'))
         ]
         
-        df_movie_cleaned = df_movie_cleaned[
-            ~((df_movie_cleaned['Note imdb'] < 8) & (df_movie_cleaned['Date de Sortie'] < '2000-01-01'))
+        df = df[
+            ~((df['Note imdb'] < 8) & (df['Date de Sortie'] < '2000-01-01'))
         ]
-        
-        df_movie_cleaned = df_movie_cleaned.drop_duplicates(subset='Titre Original')
-        df_movie_cleaned['Durée'] = pd.to_numeric(df_movie_cleaned['Durée'], errors='coerce')
-
-        # Colonnes catégoriques
-        logging.info("Création des colonnes catégoriques")
-        df_movie_cleaned['Mots-Clés'] = df_movie_cleaned['ID tmdb'].apply(self.get_movie_keywords)
-        df_movie_cleaned['Réputation'] = df_movie_cleaned['Votes imdb'].apply(self.categorize_votes)
-        df_movie_cleaned['Métrage'] = df_movie_cleaned['Durée'].apply(self.categorize_times)
-        df_movie_cleaned['Décennie'] = df_movie_cleaned['Date de Sortie'].apply(
-            lambda x: self.categorize_years(int(str(x)[:4])) if isinstance(x, str) else None
-        )
-        df_movie_cleaned['Genre Principal'] = df_movie_cleaned['Genres'].apply(
-            lambda x: x.split(',')[0] if isinstance(x, str) else x
-        )
         
         # Filtres finaux
-        df_movie_cleaned = df_movie_cleaned[
-            df_movie_cleaned['Genre Principal'] != 'Documentary'
-        ]
+        df = df[df['Genre Principal'] != 'Documentary']
+        
+        return df.drop_duplicates(subset='Titre Original')
 
+    def clean_data(self, output_path: str = '../data/cleaned/df_movie_cleaned.csv'):
+        """Processus complet de nettoyage des données."""
+        logging.info("Début du nettoyage des données")
+        
+        # Préparation des données
+        df_imdb = self._prepare_imdb_data()
+        df_tmdb = self._prepare_tmdb_data()
+        
+        # Fusion des données
+        logging.info("Fusion des données IMDb et TMDB")
+        df = pd.merge(df_imdb, df_tmdb, left_on='ID imdb', right_on='imdb_id')
+        
+        # Enrichissement et catégorisation
+        df = self._enrich_data(df)
+        df = self._categorize_data(df)
+        
+        # Application des filtres
+        df = self._apply_filters(df)
+        
         # Sélection des colonnes finales
-        df_movie_cleaned = df_movie_cleaned[[
+        cols_order = [
             'ID imdb', 'ID tmdb', 'Titre Original', 'Titre Français', 
             'Réalisateur(s)', 'Acteurs', 'Budget', 'Genres', 'Mots-Clés', 
-            'Genre Principal', 'Date de Sortie', 'Décennie', 
-            'Langue Originale', 'Langues Parlées', 'Synopsis', 
-            'Popularité', 'Réputation', 'Affiche', 'Image de Fond', 
-            'Durée', 'Métrage', 'Note tmdb', 'Votes tmdb', 
-            'Note imdb', 'Votes imdb', 'Compagnies de Production', 
+            'Genre Principal', 'Date de Sortie', 'Décennie', 'Langue Originale',
+            'Langues Parlées', 'Synopsis', 'Popularité', 'Réputation', 'Affiche',
+            'Image de Fond', 'Durée', 'Métrage', 'Note tmdb', 'Votes tmdb',
+            'Note imdb', 'Votes imdb', 'Compagnies de Production',
             'Pays de Production', 'Box Office'
-        ]]
-
-        # Export du dataframe final
+        ]
+        
+        df = df[cols_order]
+        
+        # Export
         logging.info(f"Export des données nettoyées vers {output_path}")
-        df_movie_cleaned.to_csv(output_path, index=False)
+        df.to_csv(output_path, index=False)
         
         logging.info("Nettoyage des données terminé avec succès")
-        return df_movie_cleaned
+        return df
 
 def main():
     try:
