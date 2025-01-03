@@ -75,21 +75,21 @@ def render_features_section():
         {
             "icon": "✨",
             "title": "Pour Vous",
-            "description": "Obtenez des recommandations personnalisées basées sur vos films préférés.",
+            "description": "Découvrez des recommandations sur mesure adaptées à vos films préférés grâce à notre système de recommandation avancé",
             "button": "Découvrir",
             "page": "pages/1_✨_Pour_Vous.py"
         },
         {
             "icon": "🏆",
-            "title": "Top Films",
+            "title": "A l'affiche",
             "description": "Explorez les films les plus populaires et les mieux notés du moment.",
             "button": "Explorer",
             "page": "pages/3_🏆_A_l'affiche.py"
         },
         {
             "icon": "🔍",
-            "title": "Explorer",
-            "description": "Recherchez et filtrez parmi notre vaste collection de films.",
+            "title": "Découvrir",
+            "description": "Explorez et affinez vos recherches en fonction de nombreux critères au sein de notre vaste collection de films.",
             "button": "Rechercher",
             "page": "pages/2_🔍_Découvrir.py"
         }
@@ -126,7 +126,7 @@ def render_technology_section():
             
             # Utilisation de progress bars pour visualiser les poids
             st.markdown("##### Poids des critères dans l'analyse")
-            st.progress(0.4, "🎭 Genres (40%)")
+            st.progress(0.4, "📚 Genres (40%)")
             st.progress(0.2, "🔑 Mots-clés (20%)")
             st.progress(0.15, "🎬 Réalisateur (15%)")
             st.progress(0.15, "🎭 Acteurs (15%)")
