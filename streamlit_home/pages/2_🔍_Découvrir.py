@@ -3,13 +3,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import *
-from auth import auth_component, sidebar_favorites, favorite_button
-from util import (
-    COMMON_STYLES,
-    render_main_movie,
-    recherche_films,
-    load_movie_data,
-)
+from auth import auth_component, sidebar_favorites
+from util import COMMON_STYLES, render_main_movie, load_movie_data
 import streamlit as st
 import traceback
 
@@ -22,96 +17,143 @@ st.set_page_config(
 
 def main():
     try:
-        # Chargement CSS et données
+        # Application du CSS personnalisé
         st.markdown(COMMON_CSS, unsafe_allow_html=True)
+        
+        # Chargement des données
         movies_df = load_movie_data()
-
+        
         # Authentification
         user_id = auth_component()
-
         st.sidebar.divider()
-
+        
+        # Favoris dans la sidebar si l'utilisateur est connecté
         if user_id:
             sidebar_favorites(movies_df)
         
-        # Titre de l'application
-        st.title("🔍 Explorer")
+        # En-tête principal
+        st.markdown('<h1 class="main-title">🔍 Découvrir</h1>', unsafe_allow_html=True)
 
-        # Barre latérale pour les filtres
-        st.sidebar.divider()
+        # Section des filtres
+        st.markdown('<div class="filter-container">', unsafe_allow_html=True)
+        st.markdown('<p class="filter-title">🎯 Filtres de recherche</p>', unsafe_allow_html=True)
         
-        st.sidebar.markdown("### 🔍 Options de recherche")
-        with st.sidebar:
-            
-            # Sélection des genres
+        # Organisation des filtres en colonnes
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown('<div class="filter-section">', unsafe_allow_html=True)
             genres = st.multiselect(
                 "Genres",
                 options=sorted(set([genre for genres in movies_df['genres'] for genre in genres])),
+                placeholder="Choisissez des genres...",
                 help="Sélectionnez un ou plusieurs genres"
             )
-            
-            # Note minimale
+
             note_min = st.slider(
                 "Note minimale",
                 min_value=0.0,
                 max_value=10.0,
                 value=7.0,
                 step=0.5,
-                help="Sélectionnez la note minimale (moyenne IMDB/TMDB)"
+                format="%g/10"
             )
-            
-            # Sélection de la décennie
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col2:
+            st.markdown('<div class="filter-section">', unsafe_allow_html=True)
+            decades = [""] + sorted(movies_df['decade'].unique().tolist())
             decennie = st.selectbox(
                 "Décennie",
-                options=[""] + sorted(movies_df['decade'].unique().tolist()),
+                options=decades,
+                format_func=lambda x: "Toutes les décennies" if x == "" else x,
                 help="Filtrer par décennie"
             )
-            
-            # Durée maximale
+
             duree_max = st.slider(
-                "Durée maximale (minutes)",
+                "Durée maximale",
                 min_value=0,
                 max_value=int(movies_df['runtime'].max()),
                 value=int(movies_df['runtime'].max()),
                 step=30,
-                help="Sélectionnez la durée maximale du film"
+                format="%g min"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col3:
+
+            st.markdown('<div class="filter-section">', unsafe_allow_html=True)
+            sort_options = {
+                "Note IMDB (décroissant)": ("imdb_rating", False),
+                "Note TMDB (décroissant)": ("tmdb_rating", False),
+                "Date de sortie (plus récent)": ("release_date", False),
+                "Date de sortie (plus ancien)": ("release_date", True),
+                "Durée (croissant)": ("runtime", True),
+                "Durée (décroissant)": ("runtime", False),
+            }
+            
+            sort_by = st.selectbox(
+                "Trier par",
+                options=list(sort_options.keys()),
+                index=2
             )
 
-        # Bouton de recherche
-        if st.sidebar.button("Rechercher", type="primary", use_container_width=True):
-            # Filtrage des films
-            filtered_df = recherche_films(
-                movies_df,
-                genres=genres,
-                note_min=note_min,
-                decennie=decennie if decennie != "" else None,
-                duree_max=duree_max
+            nb_films = st.slider(
+                "Nombre de films à afficher",
+                min_value=5,
+                max_value=50,
+                value=10,
+                step=5,
+                help="Limitez le nombre de films pour de meilleures performances",
+                format="%g films"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+
+        # Bouton de recherche centré
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            search_button = st.button(
+                "🔍 Rechercher",
+                type="primary",
+                use_container_width=True,
+                help="Lancer la recherche avec les filtres sélectionnés"
             )
             
-            # Affichage des résultats
-            if not filtered_df.empty:
-                st.success(f"📽️ {len(filtered_df)} films trouvés")
-                
-                # Options de tri
-                sort_options = {
-                    "Note IMDB (décroissant)": ("imdb_rating", False),
-                    "Note TMDB (décroissant)": ("tmdb_rating", False),
-                    "Date de sortie (plus récent)": ("release_date", False),
-                    "Date de sortie (plus ancien)": ("release_date", True),
-                    "Durée (croissant)": ("runtime", True),
-                    "Durée (décroissant)": ("runtime", False),
-                }
-                
-                sort_by = st.selectbox("Trier par:", options=list(sort_options.keys()))
-                sort_column, ascending = sort_options[sort_by]
-                filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
-                
-                # Affichage des films
-                for _, movie in filtered_df.iterrows():
-                    render_main_movie(movie, title_lang='fr')
-            else:
-                st.warning("🔍 Aucun film ne correspond à vos critères de recherche.")
-    
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Zone principale pour les résultats
+        filtered_df = movies_df
+        
+        # Application des filtres
+        if genres:
+            filtered_df = filtered_df[filtered_df['genres'].apply(lambda x: any(genre in x for genre in genres))]
+        
+        filtered_df = filtered_df[
+            (filtered_df['imdb_rating'] >= note_min) &
+            (filtered_df['runtime'] <= duree_max)
+        ]
+        
+        if decennie and decennie != "":
+            filtered_df = filtered_df[filtered_df['decade'] == decennie]
+        
+        # Affichage des résultats
+        if not filtered_df.empty:
+            st.info(f'📽️ {len(filtered_df)} films trouvés')
+            
+            sort_column, ascending = sort_options[sort_by]
+            filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
+            
+            # Limitation du nombre de films et affichage
+            limited_df = filtered_df.head(nb_films)
+            for _, movie in limited_df.iterrows():
+                render_main_movie(movie, title_lang='fr')
+        else:
+            st.markdown(
+                '<div class="no-results">🔍 Aucun film ne correspond à vos critères de recherche.</div>',
+                unsafe_allow_html=True
+            )
+
     except FileNotFoundError:
         st.error("❌ Fichier de données introuvable. Veuillez vérifier le chemin du fichier.")
     except Exception as e:
@@ -121,7 +163,32 @@ def main():
 if __name__ == "__main__":
     main()
 
-# Footer
 st.markdown("---")
-st.caption("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran")
-st.caption("© 2024 Film Recommender | Tous droits réservés")
+footer_col1, footer_col2 = st.columns([3, 1])
+with footer_col1:
+   st.markdown("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran, Anais Cid")
+   st.caption("© 2024 Film Recommender | Tous droits réservés")
+
+with footer_col2:
+   st.markdown("""
+        <div style='text-align: right;'>
+            <a href='https://github.com/Lu6asM/film-recommender' target='_blank'>
+                <svg width='25' height='25' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'>
+                    <path d='M50 5C25.147 5 5 25.147 5 50c0 19.87 12.87 36.723 30.804 42.656 2.25.418 3.079-.975 3.079-2.163 0-1.071-.041-4.616-.06-8.356-12.537 2.727-15.185-5.285-15.185-5.285-2.05-5.207-5.004-6.594-5.004-6.594-4.09-2.797.309-2.74.309-2.74 4.525.32 6.907 4.646 6.907 4.646 4.019 6.885 10.543 4.895 13.107 3.742.405-2.91 1.572-4.896 2.862-6.024-10.014-1.14-20.545-5.006-20.545-22.283 0-4.923 1.76-8.944 4.644-12.102-.467-1.137-2.013-5.722.436-11.926 0 0 3.787-1.213 12.407 4.624 3.598-1.001 7.46-1.502 11.295-1.518 3.834.016 7.698.517 11.301 1.518 8.614-5.837 12.396-4.624 12.396-4.624 2.454 6.204.91 10.789.443 11.926 2.89 3.158 4.64 7.179 4.64 12.102 0 17.327-10.546 21.132-20.583 22.25 1.616 1.396 3.057 4.14 3.057 8.345 0 6.026-.053 10.878-.053 12.366 0 1.2.814 2.604 3.095 2.163C82.145 86.714 95 69.87 95 50 95 25.147 74.853 5 50 5z' fill='#333'/>
+                </svg>
+            </a>
+            <a href='https://film-recommender-appviz.streamlit.app/' target='_blank' style='margin-left: 10px;'>
+                <svg width='25' height='25' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'>
+                    <rect x='10' y='60' width='15' height='30' fill='#2196F3'/>
+                    <rect x='32' y='40' width='15' height='50' fill='#4CAF50'/>
+                    <rect x='54' y='20' width='15' height='70' fill='#FFC107'/>
+                    <rect x='76' y='30' width='15' height='60' fill='#9C27B0'/>
+                    <path d='M17 55 L40 35 L62 15 L84 25' stroke='#FF5722' stroke-width='3' fill='none'/>
+                    <circle cx='17' cy='55' r='3' fill='#FF5722'/>
+                    <circle cx='40' cy='35' r='3' fill='#FF5722'/>
+                    <circle cx='62' cy='15' r='3' fill='#FF5722'/>
+                    <circle cx='84' cy='25' r='3' fill='#FF5722'/>
+                </svg>
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
