@@ -163,22 +163,25 @@ def main():
                     st.markdown(f"""
                         <div style='margin-top: 0px; padding: 10px; text-align: center;'>
                             <div style='position: relative; width: 100%; padding-top: 150%; margin-bottom: 10px;'>
-                                <a href="?selected_movie={movie['title']}">
-                                    <img src='{poster_url}' 
-                                        style='position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px;'>
-                                </a>
+                                <img src='{poster_url}' 
+                                    style='position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; cursor: pointer;'
+                                    onclick="selectMovie('{movie['title']}')"
+                                >
                             </div>
                             <div style='margin-bottom: 5px;'><strong>{movie['title']}</strong> ({movie['release_year']})</div>
                             <div style='color: gray; font-size: 0.8em; margin-bottom: 5px;'>{movie['director']}</div>
                         </div>
                     """, unsafe_allow_html=True)
 
+                    # Ajouter un bouton invisible qui sera déclenché par le clic sur l'image
                     if st.button(
-                        f"Voir les détails",
-                        key=f"movie_{movie['tmdb_id']}_{i}_{j}",
+                        "Voir",
+                        key=f"img_{movie['tmdb_id']}_{i}_{j}",
                         use_container_width=True,
                         type="secondary",
-                        help=f"Voir les détails de {display_title}"
+                        help=f"Voir les détails de {display_title}",
+                        # Le rendre invisible avec du CSS
+                        args=('style', 'display: none;')
                     ):
                         st.session_state.selected_movie = movie['title']
                         st.rerun()
