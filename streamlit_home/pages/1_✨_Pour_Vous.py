@@ -143,6 +143,7 @@ def main():
         # Calculer et afficher les recommandations
         recommended_movies = recommend_movies(current_movie['title'], movies_df, num_recommendations)
         
+        st.markdown("---")
         st.markdown("""
             <div style='padding: 20px 0;'>
                 <h2>Films similaires recommandés</h2>
@@ -158,7 +159,6 @@ def main():
                     display_title = movie['title_fr'] if title_lang == "Titre Français" else movie['title']
                     poster_url = generate_tmdb_image_url(movie['poster_path'])
 
-                    # Afficher l'image et les infos en dessous du bouton
                     # Afficher l'image et les infos en dessous du bouton
                     st.markdown(f"""
                         <div style='margin-top: 0px; padding: 10px; text-align: center;'>
@@ -204,7 +204,7 @@ if __name__ == "__main__":
 st.markdown("---")
 footer_col1, footer_col2 = st.columns([3, 1])
 with footer_col1:
-   st.markdown("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran")
+   st.markdown("Développé avec ❤️ par Lucas Meireles, Farid El Fardi, Elisabeth Tran, Anais Cid")
    st.caption("© 2024 Film Recommender | Tous droits réservés")
 
 with footer_col2:
