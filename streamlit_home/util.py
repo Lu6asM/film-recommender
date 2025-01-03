@@ -246,10 +246,16 @@ def render_cast_section(movie):
 
     # Réalisateur
     with cast_cols[0]:
-        directors = movie['director'].split(', ') if isinstance(movie['director'], str) else [movie['director']]
+        director = movie.get('director', 'Non spécifié')
+        directors = director.split(', ') if isinstance(director, str) else ['Non spécifié']
+        
         for director in directors[:1]:
-            director_id = get_person_id(director)
-            director_image_url = generate_tmdb_person_image_url(director_id)
+            if director != 'Non spécifié':
+                director_id = get_person_id(director)
+                director_image_url = generate_tmdb_person_image_url(director_id)
+            else:
+                director_image_url = "https://via.placeholder.com/120x180.png?text=Non+spécifié"
+                
             st.markdown(f"""
                 <div style='text-align: center;'>
                     <img src='{director_image_url}' style='width: 120px; margin-bottom: 10px; border-radius: 8px;'>
@@ -278,8 +284,10 @@ def render_cast_section(movie):
                 </div>
             """, unsafe_allow_html=True)
 
-def render_main_movie(movie, title_lang):
-    """Affiche le film principal en grand format"""
+def render_movie_with_rank(movie, title_lang, rank: int):
+    """Affiche le film principal en grand format avec un badge de classement optionnel"""
+    st.markdown("---")
+    
     # Layout principal : poster et infos
     poster_col, main_col, rating_col = st.columns([1, 2, 1])
     
@@ -315,10 +323,83 @@ def render_main_movie(movie, title_lang):
 
         st.markdown("---")
         
-        st.markdown(render_cast_section(movie), unsafe_allow_html=True)
+        render_cast_section(movie)
         
+    # Colonne Notes (droite)
+    with rating_col:
+        st.markdown(f"""
+            <div style='position: relative; text-align: center;'>
+                <h1 style='font-size: 3em; color: #1E88E5; margin: 0;'>#{rank}</h1>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown("#### Évaluations")
+        st.metric("Note IMDb", f"{movie['imdb_rating']:.1f}/10", f"{movie['imdb_votes']:,} votes")
+        st.metric("Note TMDb", f"{movie['tmdb_rating']:.1f}/10", f"{movie['tmdb_votes']:,} votes")
+        
+        # Petits boutons alignés horizontalement
+        st.markdown("---")
+        button_cols = st.columns([1, 1, 1])
+        with button_cols[0]:
+            st.link_button("IMDb", f"https://www.imdb.com/title/{movie['imdb_id']}", use_container_width=True, type="secondary")
+        with button_cols[1]:
+            st.link_button("TMDb", f"https://www.themoviedb.org/movie/{movie['tmdb_id']}", use_container_width=True, type="secondary")
+        with button_cols[2]:
+            favorite_button(
+                movie['tmdb_id'],
+                movie['title'],
+                f"rec_{movie['tmdb_id']}",
+                "main_view"
+            )
 
+        # Bande-annonce
+        trailer_url = get_trailer_url(movie['tmdb_id'], TMDB_API_KEY)
+        st.markdown("---")
+        st.markdown("#### 🎥 Bande-annonce")
+        if trailer_url:
+            st.video(trailer_url)
+        else:
+            st.markdown("Aucune bande-annonce disponible.")
+
+def render_main_movie(movie, title_lang):
+    """Affiche le film principal en grand format"""
+    # Layout principal : poster et infos
     st.markdown("---")
+    poster_col, main_col, rating_col = st.columns([1, 2, 1])
+    
+    # Colonne Poster
+    with poster_col:
+        poster_url = generate_tmdb_image_url(movie['poster_path'])
+        st.image(poster_url, use_container_width=True)
+        
+    # Colonne centrale (info + overview + cast)
+    with main_col:
+        # Titre
+        display_title = movie['title_fr'] if title_lang == "Titre Français" else movie['title']
+        st.markdown(f"### {display_title} ({movie['release_year']})")
+        
+        if movie['title'] != movie['title_fr']:
+            other_title = movie['title'] if title_lang == "Titre Français" else movie['title_fr']
+            st.markdown(f"<p style='color: gray; font-style: italic;'>{other_title}</p>", unsafe_allow_html=True)
+        
+        # Infos principales sur une ligne
+        info_cols = st.columns(2)
+        with info_cols[0]:
+            st.markdown(f"**Durée :** {format_duration(movie['runtime'])}")
+            st.markdown(f"**Genre(s) :** {', '.join(movie['genres'])}")
+        
+        with info_cols[1]:
+            st.markdown(f"**Budget :** {format_currency(movie['budget_millions'])}")
+            st.markdown(f"**Box Office :** {format_currency(movie['box_office_millions'])}")
+        
+        # Synopsis
+        st.markdown("---")
+        st.markdown("**Synopsis**")
+        st.markdown(f"{movie['overview']}")
+
+        st.markdown("---")
+        
+        render_cast_section(movie)
+        
     # Colonne Notes (droite)
     with rating_col:
         st.markdown("#### Évaluations")
