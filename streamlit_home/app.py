@@ -75,7 +75,7 @@ def render_features_section():
         {
             "icon": "✨",
             "title": "Pour Vous",
-            "description": "Découvrez des recommandations sur mesure adaptées à vos films préférés grâce à notre système de recommandation avancé",
+            "description": "Découvrez des recommandations sur mesure adaptées à vos films préférés grâce à notre système de recommandation avancé.",
             "button": "Découvrir",
             "page": "pages/1_✨_Pour_Vous.py"
         },
@@ -257,9 +257,9 @@ def main():
     # Authentification
     user_id = auth_component()
 
-    st.sidebar.divider()
     
     if user_id:
+        st.sidebar.divider()
         sidebar_favorites(movies_df)
     
     # Interface principale

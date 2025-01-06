@@ -5,7 +5,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import *
 from auth import auth_component, sidebar_favorites, favorite_button
 from util import (
-    COMMON_STYLES,
     generate_tmdb_image_url,
     render_main_movie,
     get_movie_by_title, 
@@ -24,30 +23,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# Ajouter après st.set_page_config
-st.markdown("""
-<style>
-    div.stButton > button:first-child {
-        background-color: #FF5733;
-        color: white;
-        border-radius: 5px;
-        border: none;
-        transition: all 0.3s;
-    }
-    div.stButton > button:hover {
-        background-color: #E64A19;
-        border: none;
-    }
-    div[data-testid="stImage"] img {
-        border-radius: 8px;
-        transition: transform 0.3s;
-    }
-    div[data-testid="stImage"] img:hover {
-        transform: scale(1.02);
-    }
-</style>
-""", unsafe_allow_html=True)
-        
 def main():
     try:
         # Chargement CSS et données
@@ -68,9 +43,8 @@ def main():
         # Authentification
         user_id = auth_component()
 
-        st.sidebar.divider()
-
         if user_id:
+            st.sidebar.divider()
             sidebar_favorites(movies_df)
             
         st.sidebar.divider()

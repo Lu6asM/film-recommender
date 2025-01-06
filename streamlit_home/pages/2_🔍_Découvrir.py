@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import *
 from auth import auth_component, sidebar_favorites
-from util import COMMON_STYLES, render_main_movie, load_movie_data
+from util import render_main_movie, load_movie_data
 import streamlit as st
 import traceback
 
@@ -25,24 +25,23 @@ def main():
         
         # Authentification
         user_id = auth_component()
-        st.sidebar.divider()
+
         
         # Favoris dans la sidebar si l'utilisateur est connecté
         if user_id:
+            st.sidebar.divider()
             sidebar_favorites(movies_df)
         
         # En-tête principal
-        st.markdown('<h1 class="main-title">🔍 Découvrir</h1>', unsafe_allow_html=True)
+        st.title("🔍 Découvrir")
 
         # Section des filtres
-        st.markdown('<div class="filter-container">', unsafe_allow_html=True)
-        st.markdown('<p class="filter-title">🎯 Filtres de recherche</p>', unsafe_allow_html=True)
+        st.markdown('🎯 Filtres de recherche', unsafe_allow_html=True)
         
         # Organisation des filtres en colonnes
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.markdown('<div class="filter-section">', unsafe_allow_html=True)
             genres = st.multiselect(
                 "Genres",
                 options=sorted(set([genre for genres in movies_df['genres'] for genre in genres])),
@@ -61,7 +60,6 @@ def main():
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown('<div class="filter-section">', unsafe_allow_html=True)
             decades = [""] + sorted(movies_df['decade'].unique().tolist())
             decennie = st.selectbox(
                 "Décennie",
@@ -82,7 +80,6 @@ def main():
 
         with col3:
 
-            st.markdown('<div class="filter-section">', unsafe_allow_html=True)
             sort_options = {
                 "Note IMDB (décroissant)": ("imdb_rating", False),
                 "Note TMDB (décroissant)": ("tmdb_rating", False),
@@ -113,9 +110,9 @@ def main():
         # Bouton de recherche centré
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
-            search_button = st.button(
+            st.button(
                 "🔍 Rechercher",
-                type="primary",
+                type="secondary",
                 use_container_width=True,
                 help="Lancer la recherche avec les filtres sélectionnés"
             )

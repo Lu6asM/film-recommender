@@ -5,7 +5,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import *
 from auth import auth_component, sidebar_favorites, favorite_button
 from util import (
-    COMMON_STYLES,
     render_movie_with_rank,
     load_movie_data,
 )
@@ -29,27 +28,13 @@ def main():
         # Authentification
         user_id = auth_component()
 
-        st.sidebar.divider()
 
         if user_id:
+            st.sidebar.divider()
             sidebar_favorites(movies_df)
 
         # Titre principal
         st.title("🏆 A l'affiche")
-
-        # Chargement CSS personnalisé
-        st.markdown("""
-        <style>
-        .stMetric .css-1wivap2 {
-            background-color: rgba(28, 131, 225, 0.1);
-            border-radius: 8px;
-            padding: 10px;
-        }
-        .stMetric .css-1wivap2 p {
-            color: rgb(28, 131, 225);
-        }
-        </style>
-        """, unsafe_allow_html=True)
 
         # Configuration d'affichage (sidebar)
         st.sidebar.divider()
