@@ -7,38 +7,6 @@ import requests
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Configuration des styles communs
-COMMON_STYLES = """
-<style>
-    div.stButton > button:first-child {
-        background-color: #FF5733;
-        color: white;
-        border-radius: 5px;
-        border: none;
-        transition: all 0.3s;
-    }
-    div.stButton > button:hover {
-        background-color: #E64A19;
-        border: none;
-    }
-    div[data-testid="stImage"] img {
-        border-radius: 8px;
-        transition: transform 0.3s;
-    }
-    div[data-testid="stImage"] img:hover {
-        transform: scale(1.02);
-    }
-    .stMetric .css-1wivap2 {
-        background-color: rgba(28, 131, 225, 0.1);
-        border-radius: 8px;
-        padding: 10px;
-    }
-    .stMetric .css-1wivap2 p {
-        color: rgb(28, 131, 225);
-    }
-</style>
-"""
-
 # Fonctions de données et de recherche
 def get_movie_by_title(movies_df, title, title_lang):
     """Recherche un film par son titre en tenant compte de la langue sélectionnée"""
@@ -418,11 +386,11 @@ def render_main_movie(movie, title_lang):
                 movie['tmdb_id'],
                 movie['title'],
                 f"rec_{movie['tmdb_id']}",
-                "main_view"  # Un identifiant unique pour différencier du reste
+                "main_view"
             )
 
         # Bande-annonce (sous les boutons)
-        trailer_url = get_trailer_url(movie['tmdb_id'], TMDB_API_KEY)  # Remplacez 'YOUR_API_KEY' par votre clé d'API
+        trailer_url = get_trailer_url(movie['tmdb_id'], TMDB_API_KEY)
         st.markdown("---")
         st.markdown("#### 🎥 Bande-annonce")
         if trailer_url:
