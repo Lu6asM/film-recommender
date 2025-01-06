@@ -255,4 +255,5 @@ def sidebar_favorites(movies_df, page_name="main"):
                     button_key = f"show_similar_{page_name}_{movie['tmdb_id']}_{idx}"
                     if st.button("👉", key=button_key, help="Voir les films similaires"):
                         st.session_state.selected_movie = movie['title']
+                        st.switch_page("pages/1_✨_Pour_vous.py")
                         st.rerun()
