@@ -14,7 +14,7 @@ VALID_POSTER_SIZES = ['w92', 'w154', 'w185', 'w342', 'w500', 'w780', 'original']
 
 # Configuration Streamlit
 st.set_page_config(
-    page_title="Recommandateur de Films",
+    page_title="Film Recommender",
     page_icon="🎬",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -89,11 +89,6 @@ COMMON_CSS = """
 
     div.stButton > button:hover {
         background-color: #34495E !important;
-    }
-    
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: rgba(44, 62, 80, 0.03);
     }
 
     /* Accents */
@@ -212,7 +207,7 @@ COMMON_CSS = """
 
     /* Sidebar */
     section[data-testid="stSidebar"] {
-        background-color: rgba(255, 87, 51, 0.05);
+        background-color: rgba(255, 88, 51, 0.1);
     }
 
     /* Filter Container */
